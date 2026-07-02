@@ -1,0 +1,152 @@
+{
+  "name": "Naihanchi",
+  "style": "Isshin Ryu",
+  "displayName": "Naihanchi (ナイハンチ)",
+  "steps": [
+    { "id": 0, "label": "Ready — set, look left", "coachCall": "Ready. Look left.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "feetTogether", "arms": ["armsDown"] },
+        { "t": 0.4, "stance": "bow" },
+        { "t": 1, "stance": "ready", "overrides": { "head": { "y": 0.8 } } }
+      ],
+      "bunkai": { "known": false },
+      "transition": { "known": true, "source": "Naihanchi.md step 0" } },
+    { "id": 1, "label": "Crossover left — haito block, grab and elbow", "coachCall": "Cross over. Haito block. Grab. Elbow strike.", "beats": 4, "kiai": false,
+      "embusen": { "x": 0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "crossoverR", "arms": ["guardBoth"] },
+        { "t": 0.3, "stance": "naihanchiDachi", "arms": ["haitoL", "guardChestR"] },
+        { "t": 0.7, "stance": "naihanchiDachi", "arms": ["grabPullL", "elbowStrikeR"] },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["grabPullL", "elbowStrikeR"], "overrides": { "head": { "y": -0.8 } } }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 1.9, "z": 0, "facing": 1.5708 }, "text": "Side entry with haito, grab and pull into an elbow to head or body (Motobu-style)." },
+      "transition": { "known": true, "source": "Naihanchi.md step 1; crossover confirmed by isshinryukarate.net" } },
+    { "id": 2, "label": "Avoid sweep — low block, nukite across", "coachCall": "Lift the leg. Low block. Nukite.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "naihanchiDachi", "arms": ["guardBoth"], "legs": ["legLiftR"] },
+        { "t": 0.5, "stance": "naihanchiDachi", "arms": ["blockLowR", "guardChestL"] },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["blockLowR", "nukiteL"] }
+      ],
+      "bunkai": { "known": true, "attack": "sweepLow", "attackerFrom": { "x": 0.7, "z": 1.2, "facing": 3.1416 }, "text": "Defend the sweep on the low line, counter with a thrust." },
+      "transition": { "known": true, "source": "Naihanchi.md step 2" } },
+    { "id": 3, "label": "Crossover right — transition", "coachCall": "Cross over right.", "beats": 2, "kiai": false,
+      "embusen": { "x": -0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "crossoverL", "arms": ["guardBoth"] },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["guardBoth"] }
+      ],
+      "bunkai": { "known": false },
+      "transition": { "known": true, "source": "isshinryukarate.net: left front crossover, right rear crossover to the right" } },
+    { "id": 4, "label": "Haito, bone block + elbow, backfist", "coachCall": "Haito block. Bone block and elbow. Backfist.", "beats": 5, "kiai": false,
+      "embusen": { "x": -0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "naihanchiDachi", "arms": ["haitoR", "guardChestL"] },
+        { "t": 0.35, "stance": "naihanchiDachi", "arms": ["blockLowR", "elbowStrikeL"] },
+        { "t": 0.7, "stance": "naihanchiDachi", "arms": ["guardChestR", "backfistL"] },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["guardChestR", "backfistL"], "overrides": { "head": { "y": -0.8 } } }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": -0.7, "z": 1.2, "facing": 3.1416 }, "text": "Layered high/low defense with elbow and high strike, torso guarded." },
+      "transition": { "known": true, "source": "Naihanchi.md step 4" } },
+    { "id": 5, "label": "Avoid sweep — middle block with torso twist", "coachCall": "Lift the leg. Middle block. Twist.", "beats": 3, "kiai": false,
+      "embusen": { "x": -0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "naihanchiDachi", "arms": ["guardBoth"], "legs": ["legLiftR"] },
+        { "t": 0.5, "stance": "naihanchiDachi", "arms": ["blockMidR", "guardChestL"], "overrides": { "chest": { "y": -0.4 } } },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["guardBoth"], "overrides": { "head": { "y": 0.8 } } }
+      ],
+      "bunkai": { "known": true, "attack": "sweepLow", "attackerFrom": { "x": -1.9, "z": 0, "facing": 4.7124 }, "text": "Defend a side attack while keeping the base; torso-twist mechanics." },
+      "transition": { "known": true, "source": "Naihanchi.md step 5" } },
+    { "id": 6, "label": "Avoid sweep — cross-body block, catch", "coachCall": "Lift. Block across. Catch.", "beats": 3, "kiai": false,
+      "embusen": { "x": -0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "naihanchiDachi", "arms": ["guardBoth"], "legs": ["legLiftL"] },
+        { "t": 0.5, "stance": "naihanchiDachi", "arms": ["blockMidR", "guardChestL"], "overrides": { "chest": { "y": 0.4 } } },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["grabPullL", "guardChestR"], "overrides": { "head": { "y": -0.8 } } }
+      ],
+      "bunkai": { "known": true, "attack": "sweepLow", "attackerFrom": { "x": 0.5, "z": 0, "facing": 1.5708 }, "text": "Cross-body defense against a low or side attack; the catch sets the next move." },
+      "transition": { "known": true, "source": "Naihanchi.md step 6" } },
+    { "id": 7, "label": "Avoid sweep — straight punch to the side", "coachCall": "Lift. Punch to the side.", "beats": 3, "kiai": false,
+      "embusen": { "x": -0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "naihanchiDachi", "arms": ["guardBoth"], "legs": ["legLiftR"] },
+        { "t": 0.5, "stance": "naihanchiDachi", "arms": ["punchMidR", "guardChestL"], "overrides": { "chest": { "y": -0.5 } } },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["punchMidR", "guardChestL"], "overrides": { "chest": { "y": -0.5 } } }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": -1.9, "z": 0, "facing": 4.7124 }, "text": "Simultaneous defense and counter punch — the classic Naihanchi feel." },
+      "transition": { "known": true, "source": "Naihanchi.md step 7" } },
+    { "id": 8, "label": "Haito to side — grab and elbow (mirror of 1)", "coachCall": "Haito block. Grab. Elbow strike.", "beats": 4, "kiai": false,
+      "embusen": { "x": -0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "naihanchiDachi", "arms": ["haitoR", "guardChestL"] },
+        { "t": 0.55, "stance": "naihanchiDachi", "arms": ["grabPullR", "elbowStrikeL"] },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["grabPullR", "elbowStrikeL"], "overrides": { "head": { "y": 0.8 } } }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchL", "attackerFrom": { "x": -1.9, "z": 0, "facing": 4.7124 }, "text": "Mirror of step 1: side entry, arm control, elbow." },
+      "transition": { "known": true, "source": "Naihanchi.md step 8" } },
+    { "id": 9, "label": "Avoid sweep — low block, nukite (mirror of 2)", "coachCall": "Lift. Low block. Nukite.", "beats": 3, "kiai": false,
+      "embusen": { "x": -0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "naihanchiDachi", "arms": ["guardBoth"], "legs": ["legLiftL"] },
+        { "t": 0.5, "stance": "naihanchiDachi", "arms": ["blockLowL", "guardChestR"] },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["blockLowL", "nukiteR"] }
+      ],
+      "bunkai": { "known": true, "attack": "sweepLow", "attackerFrom": { "x": -0.7, "z": 1.2, "facing": 3.1416 }, "text": "Defend low left, counter thrust — mirrors step 2." },
+      "transition": { "known": true, "source": "Naihanchi.md step 9" } },
+    { "id": 10, "label": "Crossover left — transition", "coachCall": "Cross over left.", "beats": 2, "kiai": false,
+      "embusen": { "x": 0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "crossoverR", "arms": ["guardBoth"] },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["guardBoth"] }
+      ],
+      "bunkai": { "known": false },
+      "transition": { "known": true, "source": "isshinryukarate.net: right front crossover, left rear crossover to the left" } },
+    { "id": 11, "label": "Haito, bone block + elbow, backfist (mirror of 4)", "coachCall": "Haito block. Bone block and elbow. Backfist.", "beats": 5, "kiai": false,
+      "embusen": { "x": 0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "naihanchiDachi", "arms": ["haitoL", "guardChestR"] },
+        { "t": 0.35, "stance": "naihanchiDachi", "arms": ["blockLowL", "elbowStrikeR"] },
+        { "t": 0.7, "stance": "naihanchiDachi", "arms": ["guardChestL", "backfistR"] },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["guardChestL", "backfistR"], "overrides": { "head": { "y": 0.8 } } }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchL", "attackerFrom": { "x": 0.7, "z": 1.2, "facing": 3.1416 }, "text": "Mirror of step 4; reinforces bilateral skill." },
+      "transition": { "known": true, "source": "Naihanchi.md step 11" } },
+    { "id": 12, "label": "Avoid sweep — middle block, torso twist (mirror of 5)", "coachCall": "Lift. Middle block. Twist.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "naihanchiDachi", "arms": ["guardBoth"], "legs": ["legLiftL"] },
+        { "t": 0.5, "stance": "naihanchiDachi", "arms": ["blockMidL", "guardChestR"], "overrides": { "chest": { "y": 0.4 } } },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["guardBoth"], "overrides": { "head": { "y": -0.8 } } }
+      ],
+      "bunkai": { "known": true, "attack": "sweepLow", "attackerFrom": { "x": 1.9, "z": 0, "facing": 1.5708 }, "text": "Side defense with torso twist, guard kept with the opposite arm." },
+      "transition": { "known": true, "source": "Naihanchi.md step 12" } },
+    { "id": 13, "label": "Avoid sweep — cross-body block, catch (mirror of 6)", "coachCall": "Lift. Block across. Catch.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "naihanchiDachi", "arms": ["guardBoth"], "legs": ["legLiftR"] },
+        { "t": 0.5, "stance": "naihanchiDachi", "arms": ["blockMidL", "guardChestR"], "overrides": { "chest": { "y": -0.4 } } },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["grabPullR", "guardChestL"], "overrides": { "head": { "y": 0.8 } } }
+      ],
+      "bunkai": { "known": true, "attack": "sweepLow", "attackerFrom": { "x": -0.5, "z": 0, "facing": 4.7124 }, "text": "Cross-body defense mirrored from step 6; preps the final strike." },
+      "transition": { "known": true, "source": "Naihanchi.md step 13" } },
+    { "id": 14, "label": "Avoid sweep — final punch, KIAI", "coachCall": "Lift. Punch. Kiai!", "beats": 4, "kiai": true,
+      "embusen": { "x": 0.7, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "naihanchiDachi", "arms": ["guardBoth"], "legs": ["legLiftL"] },
+        { "t": 0.5, "stance": "naihanchiDachi", "arms": ["punchMidL", "guardChestR"], "overrides": { "chest": { "y": 0.5 } } },
+        { "t": 1, "stance": "naihanchiDachi", "arms": ["punchMidL", "guardChestR"], "overrides": { "chest": { "y": 0.5 } } }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchL", "attackerFrom": { "x": 1.9, "z": 0, "facing": 1.5708 }, "text": "Simultaneous block and counter on the left — the final strike of the kata." },
+      "transition": { "known": true, "source": "Naihanchi.md step 14; kiai confirmed by isshinryukarate.net" } },
+    { "id": 15, "label": "Return to ready — close and bow", "coachCall": "Return. Bow.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "ready", "arms": ["guardBoth"] },
+        { "t": 0.5, "stance": "feetTogether", "arms": ["armsDown"] },
+        { "t": 1, "stance": "bow" }
+      ],
+      "bunkai": { "known": false },
+      "transition": { "known": true, "source": "Naihanchi.md step 15" } }
+  ]
+}
