@@ -1,0 +1,37 @@
+# Wansu – Isshin Ryu
+
+- Rank level / when introduced: Mid‑level kata (often after Naihanchi)
+- Lineage / dojo notes: From Shorin‑ryu; often called “dumping kata” due to signature throw
+- Starting direction: Look left from ready
+- Key themes:
+  - Strong linear punches and blocks (“strong arm form”)
+  - Angular entries and off‑line movement
+  - Throwing/dumping concept near the middle
+- Performance notes:
+  - Mix of medium pace with explosive bursts on dump and kicking combos
+  - Kiai usually on dump and final strong strikes (dojo‑specific)
+
+---
+
+## Step-by-step breakdown
+
+| # | Direction / Stance / Footwork                                       | Technique details                                                                                                  | Timing / Rhythm                   | Primary bunkai idea                                          | Variations / notes                                                       |
+|---|---------------------------------------------------------------------|--------------------------------------------------------------------------------------------------------------------|-----------------------------------|----------------------------------------------------------------|---------------------------------------------------------------------------|
+| 0 | From ready, look L                                                 | L hand open, R fist on top (ready guard)                                                                          | Brief                             | Pre‑engagement posture                                         | Opening “T‑position” type guard [web:55][web:58]                         |
+| 1 | Turn 45° L into Seisan or front stance (L fwd, off‑line)           | L low block to 45° angle, R straight punch to same line                                                           | 1–2 beat                          | Step off line, clear attack, counter punch                     | Many do backfist instead of punch [web:55][web:68]                        |
+| 2 | Look front, step fwd L into Seisan (front)                         | L low block, R straight punch                                                                                      | 1–2 beat                          | Standard block–counter to front                               | Basic linear defense [web:55]                                            |
+| 3 | Step fwd R into Seisan (front)                                     | Open L hand side block, R finger‑thrust (nukite) to body, R hand covers                                           | 3‑count (block–thrust–cover)      | Deflect in, thrust to soft target (e.g., solar plexus)        | Nukite target varies (neck, solar plexus, groin) [web:55][web:66]        |
+| 4 | Step behind (R behind L) into angle (R fwd side/diagonal)          | R punch (or backfist) as you pull in with L hand (hikite), then settle                                            | 1–2 beat                          | Off‑line entry and strong counter                              | Often taught as angle punch or backfist [web:55][web:66]                 |
+| 5 | Look L, step L to Seisan (L fwd, left line)                        | L low block, R punch to same line                                                                                 | 1–2 beat                          | Mirror of 2, new attacker on left                             | Keeps the “strong arm” theme [web:55]                                   |
+| 6 | Step fwd R to Seisan (L line)                                      | Open R hand side block, L finger‑thrust to body, L cover                                                          | 3‑count                           | Mirror of 3                                                    | Again, nukite into soft target                                           |
+| 7 | Step behind (L behind R) to angle (L fwd side/diagonal)            | L punch (or backfist) as you pull in with R hand                                                                   | 1–2 beat                          | Off‑line entry and strong counter, other side                  | Symmetrical angle work [web:55]                                         |
+| 8 | Look front, shift R back (feet together or short stance), then step R out | Avoid punch (small body shift), R straight punch, then angle punch (often slightly off‑line)                      | 2–3 beat                          | Evade and counter, then angle to secondary target             | Some versions emphasise “get out of way, then hit” [web:58]             |
+| 9 | Step up, step out L (mirror of 8, other side)                      | Avoid, L straight punch, angle punch                                                                               | 2–3 beat                          | Same idea other side                                          | Good for drilling evasive counters [web:58][web:66]                      |
+|10 | Step to front (e.g., R then L) into Seisan (front)                 | R front kick, land R fwd, then L front kick, land L fwd (sequence may be 1 or 2 kicks depending on dojo)          | 1–2 kicks, with brief pause       | Forward entry with kicks to stop advance                       | Some lineages have different kick counts/directions [web:65][web:69]     |
+|11 | From kicks, bring L hand across top into “stacked” hand position   | Hands stacked (L over R or R over L depending on lineage) in front of torso (prep for dump)                       | Short hold                        | Grabbing/head control setup                                   | “Hand stack” is signature Wansu moment [web:55][web:65]                  |
+|12 | Step in (often L) close to opponent                                | Grab, load opponent onto hip/shoulder; pivot and execute body slam / dump, set stance with leg down in front      | Single explosive action (kiai)    | Signature Wansu dump / throw                                  | Precise foot and hip mechanics vary by teacher [web:55][web:63][web:64]  |
+|13 | Look front, then L                                                 | Recover stance, orient to new attacker                                       | Brief                             | Reset after throw                                             | Usually small adjustment into ready‑like stance                          |
+|14 | Step L to side stance / Seisan (L fwd)                             | Open L side block, R punch; lift knee (L knee lift), then punch or stomp as taught                                | 2–3 beat                          | Side entry with block, punch, and knee strike                 | Versions differ on exact knee and follow‑up [web:55][web:59]             |
+|15 | Look R, step R to side stance / Seisan (R fwd)                     | Open R side block, L punch; knee lift; punch or stomp                                                             | 2–3 beat                          | Mirror of 14 on opposite side                                 | Good for knee‑strike drill                                              |
+|16 | Step up, feet together, then step out R into stance (R fwd)        | Avoid straight punch, straight punch to face, angle punch (to side target)                                        | 2–3 beat                          | Evade, counter, then hit secondary line                       | Similar concept to step 8 but later in kata [web:58]                     |
+|17 | Step 
