@@ -3,7 +3,7 @@ import { OrbitControls } from '../lib/three/OrbitControls.js';
 
 // Okinawan dojo: 12m wide (x), 9m deep (z). Kamiza on the back wall (-z),
 // performer starts at the origin facing +z (toward the default camera).
-const ROOM_W = 12, ROOM_D = 9, ROOM_H = 3.4;
+const ROOM_W = 12, ROOM_D = 12, ROOM_H = 3.4;
 
 const CAMERA_PRESETS = {
   front:    { pos: [0, 1.6, 5.2],   target: [0, 0.9, 0.8] },
@@ -83,13 +83,19 @@ function buildWalls(scene) {
 
   // Posts and beams
   const postMat = woodDark();
+  // Full post row on the kamiza wall; corner posts only at the front so the
+  // default camera view stays clear.
   for (const x of [-ROOM_W / 2, -ROOM_W / 4, 0, ROOM_W / 4, ROOM_W / 2]) {
-    for (const z of [-ROOM_D / 2, ROOM_D / 2]) {
-      const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, ROOM_H, 0.16), postMat);
-      post.position.set(x === 0 && z > 0 ? 0.001 : x, ROOM_H / 2, z);
-      post.castShadow = true;
-      scene.add(post);
-    }
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, ROOM_H, 0.16), postMat);
+    post.position.set(x, ROOM_H / 2, -ROOM_D / 2);
+    post.castShadow = true;
+    scene.add(post);
+  }
+  for (const x of [-ROOM_W / 2, ROOM_W / 2]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.16, ROOM_H, 0.16), postMat);
+    post.position.set(x, ROOM_H / 2, ROOM_D / 2);
+    post.castShadow = true;
+    scene.add(post);
   }
   for (const z of [-ROOM_D / 2, 0, ROOM_D / 2]) {
     const beam = new THREE.Mesh(new THREE.BoxGeometry(ROOM_W, 0.18, 0.14), postMat);

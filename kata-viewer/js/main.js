@@ -74,6 +74,23 @@ async function loadKata(file) {
   }
 }
 
+// Shareable / testable state via URL params: ?kata=chinto&t=30&play=1&bunkai=1&cam=side
+async function applyUrlParams() {
+  const q = new URLSearchParams(location.search);
+  const kataParam = q.get('kata');
+  const file = kataParam && KATAS.find(k => k.file === kataParam + '.json')?.file;
+  await loadKata(file || KATAS[0].file);
+  if (file) document.getElementById('kata-select').value = file;
+  if (q.get('bunkai') === '1') {
+    document.getElementById('toggle-bunkai').checked = true;
+    bunkai.setEnabled(true);
+  }
+  if (q.get('cam')) setCameraPreset(q.get('cam'));
+  const t = parseFloat(q.get('t'));
+  if (player && !Number.isNaN(t)) { player.seek(t); applyTime(t); }
+  if (player && q.get('play') === '1') player.play();
+}
+
 function applyTime(t) {
   if (!timeline) return;
   const sampled = samplePose(timeline, t);
@@ -126,4 +143,4 @@ renderer.setAnimationLoop((now) => {
   renderer.render(scene, camera);
 });
 
-loadKata(KATAS[0].file);
+applyUrlParams();

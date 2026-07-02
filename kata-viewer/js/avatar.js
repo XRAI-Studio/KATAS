@@ -59,6 +59,15 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
   const skull = new THREE.Mesh(new THREE.SphereGeometry(0.115, 16, 12), skinMat);
   skull.position.y = 0.10; skull.castShadow = true;
   head.add(skull);
+  // face indicators: nose on the +z (facing) side, dark hair cap toward the back
+  const hairMat = new THREE.MeshStandardMaterial({ color: 0x2b2018, roughness: 0.9 });
+  const hair = new THREE.Mesh(new THREE.SphereGeometry(0.118, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.55), hairMat);
+  hair.position.set(0, 0.105, -0.012);
+  head.add(hair);
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.02, 0.05, 8), skinMat);
+  nose.rotation.x = Math.PI / 2;
+  nose.position.set(0, 0.09, 0.115);
+  head.add(nose);
 
   // Arms — gi sleeves on upper arm, skin forearm, fist sphere
   for (const side of ['L', 'R']) {
