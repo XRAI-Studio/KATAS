@@ -1,0 +1,228 @@
+{
+  "name": "Seisan",
+  "style": "Isshin Ryu",
+  "displayName": "Seisan (十三)",
+  "steps": [
+    { "id": 0, "label": "Ready — bow and set", "coachCall": "Ready position. Bow.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "feetTogether", "arms": ["armsDown"] },
+        { "t": 0.4, "stance": "bow" },
+        { "t": 1, "stance": "ready" }
+      ],
+      "bunkai": { "known": false },
+      "transition": { "known": true, "source": "Seisan.md" } },
+    { "id": 1, "label": "Step left — middle block, right punch", "coachCall": "Step left. Middle block. Punch.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0, "z": 0.7, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["blockMidL", "chamberR"] },
+        { "t": 0.55, "stance": "seisanDachiL", "arms": ["blockMidL", "punchMidR"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["blockMidL", "chamberR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 0, "z": 1.9, "facing": 3.1416 }, "text": "Defend mid-level strike, counter to torso; retract can be a wrist release." },
+      "transition": { "known": true, "source": "Seisan.md step 1" } },
+    { "id": 2, "label": "Step right — left punch", "coachCall": "Step. Left punch.", "beats": 2, "kiai": false,
+      "embusen": { "x": 0, "z": 1.4, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiR", "arms": ["chamberL", "guardChestR"] },
+        { "t": 0.55, "stance": "seisanDachiR", "arms": ["punchMidL", "guardChestR"] },
+        { "t": 1, "stance": "seisanDachiR", "arms": ["chamberL", "guardChestR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchL", "attackerFrom": { "x": 0, "z": 2.6, "facing": 3.1416 }, "text": "Continue forward pressure; can be body-check plus punch." },
+      "transition": { "known": true, "source": "Seisan.md step 2" } },
+    { "id": 3, "label": "Step left — right punch", "coachCall": "Step. Right punch.", "beats": 2, "kiai": false,
+      "embusen": { "x": 0, "z": 2.1, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["chamberR", "guardChestL"] },
+        { "t": 0.55, "stance": "seisanDachiL", "arms": ["punchMidR", "guardChestL"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["chamberR", "guardChestL"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 0, "z": 3.3, "facing": 3.1416 }, "text": "Third advancing strike to finish or break the guard." },
+      "transition": { "known": true, "source": "Seisan.md step 3" } },
+    { "id": 4, "label": "Shuffle forward — double high block", "coachCall": "Shuffle. Double high block.", "beats": 2, "kiai": false,
+      "embusen": { "x": 0, "z": 2.5, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["guardBoth"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["blockDoubleHigh"] }
+      ],
+      "bunkai": { "known": true, "attack": "chokeFront", "attackerFrom": { "x": 0, "z": 3.4, "facing": 3.1416 }, "text": "Defend high grab or choke; follow with grab or head control." },
+      "transition": { "known": true, "source": "Seisan.md step 4" } },
+    { "id": 5, "label": "Pivot 180° — double low shuto", "coachCall": "Turn. Double low shuto.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0, "z": 2.5, "facing": 3.1416 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["blockDoubleHigh"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["blockDoubleLow"] }
+      ],
+      "bunkai": { "known": true, "attack": "frontKickR", "attackerFrom": { "x": 0, "z": 1.4, "facing": 0 }, "text": "Defend low attack behind you; strike legs or groin nerve points." },
+      "transition": { "known": true, "source": "Seisan.md step 5" } },
+    { "id": 6, "label": "Step right — shote, haito, low shuto, grab-pull", "coachCall": "Shote. Haito high. Low shuto. Grab and pull.", "beats": 4, "kiai": false,
+      "embusen": { "x": 0, "z": 1.8, "facing": 3.1416 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiR", "arms": ["shoteL", "chamberR"] },
+        { "t": 0.35, "stance": "seisanDachiR", "arms": ["shoteL", "haitoR"] },
+        { "t": 0.7, "stance": "seisanDachiR", "arms": ["shutoLowL", "haitoR"] },
+        { "t": 1, "stance": "seisanDachiR", "arms": ["shutoLowL", "grabPullR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 0, "z": 0.7, "facing": 0 }, "text": "High-line defense, low-line strike, then arm control; arm bar or head twist variations." },
+      "transition": { "known": true, "source": "Seisan.md step 6" } },
+    { "id": 7, "label": "Step left — mirror shote sequence", "coachCall": "Shote. Haito. Grab and pull. Low shuto.", "beats": 4, "kiai": false,
+      "embusen": { "x": 0, "z": 1.1, "facing": 3.1416 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["shoteR", "chamberL"] },
+        { "t": 0.35, "stance": "seisanDachiL", "arms": ["shoteR", "haitoL"] },
+        { "t": 0.7, "stance": "seisanDachiL", "arms": ["grabPullL", "haitoL"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["grabPullL", "shutoLowR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchL", "attackerFrom": { "x": 0, "z": 0.0, "facing": 0 }, "text": "Mirror of step 6: cross-arm control and groin or leg strike." },
+      "transition": { "known": true, "source": "Seisan.md step 7" } },
+    { "id": 8, "label": "Step right — shote sequence, catch, look left", "coachCall": "Shote. Haito. Low shuto. Grab. Look left.", "beats": 4, "kiai": false,
+      "embusen": { "x": 0, "z": 0.4, "facing": 3.1416 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiR", "arms": ["shoteL", "chamberR"] },
+        { "t": 0.3, "stance": "seisanDachiR", "arms": ["shoteL", "haitoR"] },
+        { "t": 0.6, "stance": "seisanDachiR", "arms": ["shutoLowL", "haitoR"] },
+        { "t": 1, "stance": "seisanDachiR", "arms": ["shutoLowL", "grabPullR"], "overrides": { "head": { "y": 0.9 } } }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 0, "z": -0.7, "facing": 0 }, "text": "Clear and control the opponent; the catch sets up the angle change." },
+      "transition": { "known": true, "source": "Seisan.md step 8" } },
+    { "id": 9, "label": "Pivot left — block, two punches, kick, punch", "coachCall": "Turn. Block. Punch. Punch. Front kick. Punch.", "beats": 5, "kiai": false,
+      "embusen": { "x": -0.9, "z": 0.4, "facing": 4.7124 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["blockMidL", "chamberR"] },
+        { "t": 0.25, "stance": "seisanDachiL", "arms": ["punchMidR", "guardChestL"] },
+        { "t": 0.45, "stance": "seisanDachiL", "arms": ["punchMidL", "guardChestR"] },
+        { "t": 0.7, "stance": "seisanDachiL", "arms": ["guardBoth"], "legs": ["frontKickR"] },
+        { "t": 1, "stance": "seisanDachiR", "arms": ["punchMidR", "guardChestL"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": -2.1, "z": 0.4, "facing": 1.5708 }, "text": "Layered response to an advancing puncher: stop, disrupt, kick, finish." },
+      "transition": { "known": true, "source": "Seisan.md step 9" } },
+    { "id": 10, "label": "Turn 180° — mirror combo to the other side", "coachCall": "Turn. Block. Punch. Punch. Front kick. Punch.", "beats": 5, "kiai": false,
+      "embusen": { "x": 0.0, "z": 0.4, "facing": 1.5708 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiR", "arms": ["blockMidR", "chamberL"] },
+        { "t": 0.25, "stance": "seisanDachiR", "arms": ["punchMidL", "guardChestR"] },
+        { "t": 0.45, "stance": "seisanDachiR", "arms": ["punchMidR", "guardChestL"] },
+        { "t": 0.7, "stance": "seisanDachiR", "arms": ["guardBoth"], "legs": ["frontKickL"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["punchMidL", "guardChestR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchL", "attackerFrom": { "x": 1.2, "z": 0.4, "facing": 4.7124 }, "text": "Mirror application on the opposite side; bilateral coordination." },
+      "transition": { "known": true, "source": "Seisan.md step 10" } },
+    { "id": 11, "label": "Turn to front — combo, drop to Seiunchin block", "coachCall": "Turn front. Block. Punch. Punch. Kick. Punch. Drop and block.", "beats": 6, "kiai": false,
+      "embusen": { "x": 0, "z": 1.2, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["blockMidL", "chamberR"] },
+        { "t": 0.2, "stance": "seisanDachiL", "arms": ["punchMidR", "guardChestL"] },
+        { "t": 0.38, "stance": "seisanDachiL", "arms": ["punchMidL", "guardChestR"] },
+        { "t": 0.58, "stance": "seisanDachiL", "arms": ["guardBoth"], "legs": ["frontKickR"] },
+        { "t": 0.78, "stance": "seisanDachiR", "arms": ["punchMidR", "guardChestL"] },
+        { "t": 1, "stance": "seiunchinDachi", "arms": ["blockMidL", "chamberR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 0, "z": 2.4, "facing": 3.1416 }, "text": "Finish the attacker, then root in Seiunchin; the drop can be a takedown mechanic." },
+      "transition": { "known": true, "source": "Seisan.md step 11" } },
+    { "id": 12, "label": "Step back to cat — catch", "coachCall": "Look right. Back to cat stance. Catch.", "beats": 2, "kiai": false,
+      "embusen": { "x": 0, "z": 1.0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "catL", "arms": ["guardBoth"], "overrides": { "head": { "y": -0.8 } } },
+        { "t": 1, "stance": "catL", "arms": ["grabPullL", "guardChestR"] }
+      ],
+      "bunkai": { "known": false },
+      "transition": { "known": true, "source": "Seisan.md step 12" } },
+    { "id": 13, "label": "Side stance — right backfist, retreat to cat", "coachCall": "Step out. Backfist. Back to cat.", "beats": 3, "kiai": false,
+      "embusen": { "x": -0.5, "z": 1.0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiR", "arms": ["guardChestL", "chamberR"] },
+        { "t": 0.45, "stance": "seisanDachiR", "arms": ["guardChestL", "backfistR"] },
+        { "t": 1, "stance": "catL", "arms": ["guardBoth"] }
+      ],
+      "bunkai": { "known": true, "attack": "punchHighR", "attackerFrom": { "x": -1.7, "z": 1.0, "facing": 1.5708 }, "text": "Snap backfist to head or temple, then disengage." },
+      "transition": { "known": true, "source": "Seisan.md step 13" } },
+    { "id": 14, "label": "Kick, set Seiunchin, pivot — low block, punch, rooted block", "coachCall": "Kick. Set. Low block. Punch. Drop. Middle block.", "beats": 5, "kiai": false,
+      "embusen": { "x": -0.2, "z": 1.3, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "chintoL", "arms": ["guardBoth"] },
+        { "t": 0.2, "stance": "ready", "arms": ["guardBoth"], "legs": ["frontKickR"] },
+        { "t": 0.45, "stance": "seiunchinDachi", "arms": ["guardBoth"] },
+        { "t": 0.65, "stance": "seisanDachiR", "arms": ["blockLowR", "chamberL"] },
+        { "t": 0.82, "stance": "seisanDachiR", "arms": ["blockLowR", "punchMidL"] },
+        { "t": 1, "stance": "seiunchinDachi", "arms": ["blockMidR", "chamberL"] }
+      ],
+      "bunkai": { "known": true, "attack": "frontKickR", "attackerFrom": { "x": -0.2, "z": 2.5, "facing": 3.1416 }, "text": "Enter with a kick, drop their attack, finish and root." },
+      "transition": { "known": true, "source": "Seisan.md step 14" } },
+    { "id": 15, "label": "Step back to cat — catch", "coachCall": "Look left. Back to cat. Catch.", "beats": 2, "kiai": false,
+      "embusen": { "x": -0.2, "z": 1.1, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "catR", "arms": ["guardBoth"], "overrides": { "head": { "y": 0.8 } } },
+        { "t": 1, "stance": "catR", "arms": ["grabPullR", "guardChestL"] }
+      ],
+      "bunkai": { "known": false },
+      "transition": { "known": true, "source": "Seisan.md step 15" } },
+    { "id": 16, "label": "Side stance — left backfist, retreat to cat", "coachCall": "Step out. Backfist. Back to cat.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0.3, "z": 1.1, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["guardChestR", "chamberL"] },
+        { "t": 0.45, "stance": "seisanDachiL", "arms": ["guardChestR", "backfistL"] },
+        { "t": 1, "stance": "catR", "arms": ["guardBoth"] }
+      ],
+      "bunkai": { "known": true, "attack": "punchHighL", "attackerFrom": { "x": 1.5, "z": 1.1, "facing": 4.7124 }, "text": "Mirror of step 13: backfist to jaw, temple, or attacking hand." },
+      "transition": { "known": true, "source": "Seisan.md step 16" } },
+    { "id": 17, "label": "Kick, set, pivot — mirrored low block, punch, rooted block", "coachCall": "Kick. Set. Low block. Punch. Drop. Middle block.", "beats": 5, "kiai": false,
+      "embusen": { "x": 0.1, "z": 1.4, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "chintoR", "arms": ["guardBoth"] },
+        { "t": 0.2, "stance": "ready", "arms": ["guardBoth"], "legs": ["frontKickL"] },
+        { "t": 0.45, "stance": "seiunchinDachi", "arms": ["guardBoth"] },
+        { "t": 0.65, "stance": "seisanDachiL", "arms": ["blockLowL", "chamberR"] },
+        { "t": 0.82, "stance": "seisanDachiL", "arms": ["blockLowL", "punchMidR"] },
+        { "t": 1, "stance": "seiunchinDachi", "arms": ["blockMidL", "chamberR"] }
+      ],
+      "bunkai": { "known": true, "attack": "frontKickL", "attackerFrom": { "x": 0.1, "z": 2.6, "facing": 3.1416 }, "text": "Mirror of 14: entry, kick, low-line defense, finish." },
+      "transition": { "known": true, "source": "Seisan.md step 17" } },
+    { "id": 18, "label": "Step back to cat — catch", "coachCall": "Look right. Back to cat. Catch.", "beats": 2, "kiai": false,
+      "embusen": { "x": 0.1, "z": 1.2, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "catL", "arms": ["guardBoth"], "overrides": { "head": { "y": -0.8 } } },
+        { "t": 1, "stance": "catL", "arms": ["grabPullL", "guardChestR"] }
+      ],
+      "bunkai": { "known": false },
+      "transition": { "known": true, "source": "Seisan.md step 18" } },
+    { "id": 19, "label": "Backfist, set Seisan — low block, punch, rooted block", "coachCall": "Backfist. Low block. Punch. Drop. Middle block.", "beats": 5, "kiai": false,
+      "embusen": { "x": -0.3, "z": 1.2, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiR", "arms": ["guardChestL", "backfistR"] },
+        { "t": 0.35, "stance": "seisanDachiR", "arms": ["blockLowR", "chamberL"] },
+        { "t": 0.6, "stance": "seisanDachiR", "arms": ["blockLowR", "punchMidL"] },
+        { "t": 1, "stance": "seiunchinDachi", "arms": ["blockMidR", "chamberL"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": -1.5, "z": 1.2, "facing": 1.5708 }, "text": "Final strong defense and counter on this line." },
+      "transition": { "known": true, "source": "Seisan.md step 19" } },
+    { "id": 20, "label": "Right foot back to cat — left shuto block", "coachCall": "Back to cat. Shuto block.", "beats": 2, "kiai": false,
+      "embusen": { "x": -0.1, "z": 1.0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "catR", "arms": ["guardBoth"] },
+        { "t": 1, "stance": "catR", "arms": ["shutoMidL", "guardChestR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": -0.1, "z": 2.1, "facing": 3.1416 }, "text": "Defend the final incoming attack to the midline; arm cut or neck control." },
+      "transition": { "known": true, "source": "Seisan.md step 20" } },
+    { "id": 21, "label": "Kick, land — pull and punch, KIAI", "coachCall": "Kick. Land. Pull and punch. Kiai!", "beats": 4, "kiai": true,
+      "embusen": { "x": -0.1, "z": 1.4, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "ready", "arms": ["guardBoth"], "legs": ["frontKickR"] },
+        { "t": 0.5, "stance": "seisanDachiL", "arms": ["grabPullL", "chamberR"] },
+        { "t": 0.8, "stance": "seisanDachiL", "arms": ["grabPullL", "punchMidR"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["grabPullL", "punchMidR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": -0.1, "z": 2.6, "facing": 3.1416 }, "text": "Final decisive blow: kick, pull the opponent onto the punch." },
+      "transition": { "known": true, "source": "Seisan.md step 21; kiai confirmed by isshinryukarate.net" } },
+    { "id": 22, "label": "Cat stance — heel scoop and throw, close", "coachCall": "Scoop the heel. Throw. Return. Bow.", "beats": 5, "kiai": false,
+      "embusen": { "x": 0, "z": 1.0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "catR", "arms": ["openHandBlockL", "openHandBlockR"] },
+        { "t": 0.35, "stance": "catR", "arms": ["shutoLowL", "shoteR"], "overrides": { "spine": { "x": 0.35 } } },
+        { "t": 0.6, "stance": "catR", "arms": ["guardBoth"] },
+        { "t": 0.85, "stance": "feetTogether", "arms": ["armsDown"] },
+        { "t": 1, "stance": "bow" }
+      ],
+      "bunkai": { "known": true, "attack": "frontKickR", "attackerFrom": { "x": 0, "z": 2.1, "facing": 3.1416 }, "text": "Catch the kick under the heel, palm across the foot, twist and throw." },
+      "transition": { "known": true, "source": "Seisan.md step 22; mechanics confirmed by isshinryukarate.net" } }
+  ]
+}
