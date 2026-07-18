@@ -1,7 +1,8 @@
 {
   "schemaVersion": 1,
   "title": "KATAS",
-  "description": "An XRAI Studio training-ground app — currently in development.",
+  "description": "An XRAI Studio training-ground app — practice drills and sharpen your skills, live now.",
   "owner": "scott",
+  "liveUrl": "https://katas-five.vercel.app",
   "accent": "#ffbf00"
 }
