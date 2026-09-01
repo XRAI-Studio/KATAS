@@ -35,11 +35,29 @@ const bunkai = initBunkai(scene);
 let timeline = null;
 let player = null;
 
+let lastPreset = null;
 const ui = initUI({
   katas: KATAS,
   onKataChange: loadKata,
-  onPreset: setCameraPreset,
+  onPreset: (name) => { lastPreset = name; setCameraPreset(name); },
   getPlayer: () => player,
+});
+
+// "Copy link": a URL that reopens this exact moment (kata, time, camera preset,
+// bunkai state) — the way to cite a moment in review notes (docs/review-notes.md).
+const linkOut = document.getElementById('link-out');
+document.getElementById('btn-link').addEventListener('click', async () => {
+  if (!player) return;
+  const q = new URLSearchParams();
+  q.set('kata', document.getElementById('kata-select').value.replace(/\.json$/, ''));
+  q.set('t', player.time.toFixed(2));
+  if (lastPreset) q.set('cam', lastPreset);
+  if (document.getElementById('toggle-bunkai').checked) q.set('bunkai', '1');
+  const url = location.origin + location.pathname + '?' + q.toString();
+  linkOut.value = url;
+  linkOut.classList.remove('hidden');
+  linkOut.select();
+  try { await navigator.clipboard.writeText(url); } catch { /* text stays selected for manual copy */ }
 });
 
 // Kiai visual effects
@@ -85,7 +103,7 @@ async function applyUrlParams() {
     document.getElementById('toggle-bunkai').checked = true;
     bunkai.setEnabled(true);
   }
-  if (q.get('cam')) setCameraPreset(q.get('cam'));
+  if (q.get('cam')) { lastPreset = q.get('cam'); setCameraPreset(lastPreset); }
   const t = parseFloat(q.get('t'));
   if (player && !Number.isNaN(t)) { player.seek(t); applyTime(t); }
   if (player && q.get('play') === '1') player.play();

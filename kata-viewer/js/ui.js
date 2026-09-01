@@ -10,6 +10,7 @@ export function initUI({ katas, onKataChange, onPreset, getPlayer }) {
   const speed = $('speed');
   const speedValue = $('speed-value');
   const stepLabel = $('step-label');
+  const timeReadout = $('time-readout');
   const errorBanner = $('error-banner');
 
   for (const k of katas) {
@@ -80,6 +81,7 @@ export function initUI({ katas, onKataChange, onPreset, getPlayer }) {
     if (!scrubbing) scrub.value = t;
     const p = getPlayer();
     btnPlay.textContent = p && p.playing ? '⏸' : '▶';
+    timeReadout.textContent = 't = ' + t.toFixed(1) + ' s';   // cite this in review notes
   }
 
   function showError(msg) {
