@@ -100,7 +100,9 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
     if (pose.joints) {
       for (const [name, rot] of Object.entries(pose.joints)) {
         const g = joints[name];
-        if (g) g.rotation.set(rot.x || 0, rot.y || 0, rot.z || 0);
+        if (!g) continue;
+        if (rot.w !== undefined) g.quaternion.set(rot.x, rot.y, rot.z, rot.w);   // sampled (quaternion)
+        else g.rotation.set(rot.x || 0, rot.y || 0, rot.z || 0);               // authored (Euler XYZ)
       }
     }
     if (pose.root) {

@@ -1,7 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { buildTimeline, samplePose, stepAt, Player, SECONDS_PER_BEAT } from '../kata-viewer/js/player.js';
+import {
+  buildTimeline, samplePose, stepAt, Player, SECONDS_PER_BEAT,
+  buildClip, sampleClip, KIME_HOLD_BEATS,
+} from '../kata-viewer/js/player.js';
 import { POSES } from '../kata-viewer/js/poses.js';
+import { eulerXYZToQuat, quatToEulerXYZ } from '../kata-viewer/js/quat.js';
+
+const near = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
+function assertQuatNear(q, ref, eps = 1e-9) {
+  for (const k of ['x', 'y', 'z', 'w']) assert.ok(near(q[k], ref[k], eps), `${k}: got ${q[k]}, want ${ref[k]}`);
+}
 
 const kata = {
   name: 'Test',
@@ -28,6 +37,10 @@ const kata = {
   ],
 };
 
+// ---------------------------------------------------------------------------
+// Timeline structure
+// ---------------------------------------------------------------------------
+
 test('timeline duration comes from beats', () => {
   const tl = buildTimeline(kata, POSES);
   assert.equal(tl.duration, (2 + 4) * SECONDS_PER_BEAT);
@@ -39,21 +52,160 @@ test('timeline duration comes from beats', () => {
   assert.equal(tl.steps[0].unverified, false);
 });
 
-test('samplePose at keyframe time returns exact pose values', () => {
+test('ease is derived: a newly arriving technique is kime, carried-over or retracting poses are soft', () => {
+  const tl = buildTimeline(kata, POSES);
+  const authored = tl.kfs.filter(k => !k.holdEnd);
+  assert.deepEqual(authored.map(k => k.ease), [
+    'soft',   // ready
+    'kime',   // blockMidL arrives
+    'soft',   // step 2 starts with the same block: nothing new
+    'kime',   // punchMidR arrives
+    'soft',   // chamber (retract)
+  ]);
+});
+
+test('a technique arriving with a new step is kime (comparison crosses step boundaries)', () => {
+  const k = {
+    name: 'X', steps: [
+      { id: 1, label: 'a', coachCall: 'a', beats: 2, embusen: { x: 0, z: 0, facing: 0 },
+        keyframes: [{ t: 0, stance: 'ready' }, { t: 1, stance: 'ready', arms: ['guardBoth'] }], transition: { known: true } },
+      { id: 2, label: 'b', coachCall: 'b', beats: 2, embusen: { x: 0, z: 0, facing: 0 },
+        keyframes: [{ t: 0, stance: 'naihanchiDachi', arms: ['haitoR', 'guardChestL'] }, { t: 1, stance: 'naihanchiDachi', arms: ['haitoR', 'guardChestL'] }],
+        transition: { known: true } },
+    ],
+  };
+  const eases = buildTimeline(k, POSES).kfs.filter(x => !x.holdEnd).map(x => x.ease);
+  assert.deepEqual(eases, ['soft', 'soft', 'kime', 'soft']);
+});
+
+test('authored ease overrides the derived one; pass-through stances derive pass', () => {
+  const k = {
+    name: 'X', steps: [
+      { id: 1, label: 'a', coachCall: 'a', beats: 3, embusen: { x: 0, z: 0, facing: 0 },
+        keyframes: [
+          { t: 0, stance: 'ready' },
+          { t: 0.3, stance: 'crossoverL', arms: ['guardBoth'] },
+          { t: 0.6, stance: 'naihanchiDachi', arms: ['punchMidR'], ease: 'soft' },
+          { t: 1, stance: 'naihanchiDachi', arms: ['chamberR'], ease: 'kime' },
+        ], transition: { known: true } },
+    ],
+  };
+  const eases = buildTimeline(k, POSES).kfs.filter(x => !x.holdEnd).map(x => x.ease);
+  assert.deepEqual(eases, ['soft', 'pass', 'soft', 'kime']);
+});
+
+test('kime keyframes get a hold frame; times stay ascending and duration is unchanged', () => {
+  const tl = buildTimeline(kata, POSES);
+  const hold = KIME_HOLD_BEATS * SECONDS_PER_BEAT;
+  // authored times: 0, 2, (step-2 first kf pushed to 2 + 0.25*4 =) 3, 4, 6
+  assert.deepEqual(tl.kfs.map(k => +k.time.toFixed(6)), [0, 2, +(2 + hold).toFixed(6), 3, 4, +(4 + hold).toFixed(6), 6]);
+  assert.deepEqual(tl.kfs.map(k => !!k.holdEnd), [false, false, true, false, false, true, false]);
+  for (let i = 1; i < tl.kfs.length; i++) assert.ok(tl.kfs[i].time > tl.kfs[i - 1].time, 'times ascending');
+  assert.equal(tl.duration, 6 * SECONDS_PER_BEAT);
+});
+
+test('a hold is capped at half the gap to the next keyframe', () => {
+  const k = {
+    name: 'X', steps: [
+      { id: 1, label: 'a', coachCall: 'a', beats: 1, embusen: { x: 0, z: 0, facing: 0 },
+        keyframes: [
+          { t: 0, stance: 'ready' },
+          { t: 0.8, stance: 'seisanDachiL', arms: ['punchMidR'] },
+          { t: 1, stance: 'seisanDachiL', arms: ['chamberR'] },
+        ], transition: { known: true } },
+    ],
+  };
+  const tl = buildTimeline(k, POSES);
+  const holdEnd = tl.kfs.find(x => x.holdEnd);
+  assert.ok(near(holdEnd.time, 0.8 + 0.1 * SECONDS_PER_BEAT), `hold end at ${holdEnd.time}`);
+});
+
+test('the final keyframe never gets a hold; an authored hold (in beats) is honoured', () => {
+  const k = {
+    name: 'X', steps: [
+      { id: 1, label: 'a', coachCall: 'a', beats: 4, embusen: { x: 0, z: 0, facing: 0 },
+        keyframes: [
+          { t: 0, stance: 'ready' },
+          { t: 0.5, stance: 'seisanDachiL', arms: ['punchMidR'], hold: 0.6 },
+          { t: 1, stance: 'seisanDachiL', arms: ['punchMidL'] },
+        ], transition: { known: true } },
+    ],
+  };
+  const tl = buildTimeline(k, POSES);
+  assert.equal(tl.kfs.filter(x => x.holdEnd).length, 1);
+  assert.ok(near(tl.kfs[2].time, 2 + 0.6 * SECONDS_PER_BEAT));
+  assert.equal(tl.kfs[tl.kfs.length - 1].holdEnd, undefined);
+});
+
+// ---------------------------------------------------------------------------
+// Sampling
+// ---------------------------------------------------------------------------
+
+test('samplePose returns joint quaternions equal to the keyframe pose at keyframe times', () => {
   const tl = buildTimeline(kata, POSES);
   const p0 = samplePose(tl, 0);
-  assert.equal(p0.joints.shoulderR.x, POSES.ready.joints.shoulderR.x);
+  assertQuatNear(p0.joints.shoulderR, eulerXYZToQuat(POSES.ready.joints.shoulderR));
   const pEnd = samplePose(tl, 2 * SECONDS_PER_BEAT);
-  // start of step 2 = seisanDachiL + blockMidL; blockMidL sets shoulderL
-  assert.equal(pEnd.joints.shoulderL.x, POSES.blockMidL.joints.shoulderL.x);
+  assertQuatNear(pEnd.joints.shoulderL, eulerXYZToQuat(POSES.blockMidL.joints.shoulderL));
+});
+
+test('the pose is constant through a hold', () => {
+  const tl = buildTimeline(kata, POSES);
+  const hold = KIME_HOLD_BEATS * SECONDS_PER_BEAT;
+  assert.deepEqual(samplePose(tl, 2 + hold / 2), samplePose(tl, 2));
+  assert.deepEqual(samplePose(tl, 4 + hold * 0.9), samplePose(tl, 4));
 });
 
 test('midpoint sample lies strictly between keyframe values', () => {
   const tl = buildTimeline(kata, POSES);
-  const a = samplePose(tl, 0).joints.hipL.x;               // ready: 0
-  const b = samplePose(tl, 2 * SECONDS_PER_BEAT).joints.hipL.x; // seisan: -0.42
-  const mid = samplePose(tl, SECONDS_PER_BEAT).joints.hipL.x;
+  const a = quatToEulerXYZ(samplePose(tl, 0).joints.hipL).x;                       // ready: 0
+  const b = quatToEulerXYZ(samplePose(tl, 2 * SECONDS_PER_BEAT).joints.hipL).x;   // seisan: -0.42
+  const mid = quatToEulerXYZ(samplePose(tl, SECONDS_PER_BEAT).joints.hipL).x;
   assert.ok(mid < Math.max(a, b) && mid > Math.min(a, b), `mid ${mid} not between ${a} and ${b}`);
+});
+
+// feetTogether -> frontKickR rotates hipR about a single axis (x: 0 -> -1.45),
+// so slerp is linear in the angle and the curve value can be read straight
+// off the sampled Euler angle.
+const curveSample = (fromEase, toEase, u) => {
+  const clip = buildClip([
+    { time: 0, parts: ['feetTogether'], ease: 'soft' },
+    { time: 1, parts: ['feetTogether'], ease: fromEase },
+    { time: 2, parts: ['frontKickR'], ease: toEase },
+  ], POSES, { hold: 0 });
+  return quatToEulerXYZ(sampleClip(clip, 1 + u).joints.hipR).x / -1.45;
+};
+
+test('segment curve follows the (from stop/moving, into kind) table', () => {
+  assert.ok(near(curveSample('soft', 'kime', 0.5), 0.375, 1e-6), 'stop -> kime: u^2(2-u)');
+  assert.ok(near(curveSample('soft', 'soft', 0.5), 0.5, 1e-6),   'stop -> soft: smoothstep');
+  assert.ok(near(curveSample('soft', 'pass', 0.5), 0.25, 1e-6),  'stop -> pass: ease-in');
+  assert.ok(near(curveSample('pass', 'kime', 0.5), 0.375, 1e-6), 'moving -> kime: u^2(2-u)');
+  assert.ok(near(curveSample('pass', 'soft', 0.5), 0.75, 1e-6),  'moving -> soft: ease-out');
+  assert.ok(near(curveSample('pass', 'pass', 0.5), 0.5, 1e-6),   'moving -> pass: linear');
+});
+
+test('every segment curve is monotonic and hits its endpoints', () => {
+  for (const [from, to] of [['soft', 'kime'], ['soft', 'soft'], ['soft', 'pass'], ['pass', 'kime'], ['pass', 'soft'], ['pass', 'pass']]) {
+    let prev = 0;
+    for (let i = 0; i <= 20; i++) {
+      const v = curveSample(from, to, i / 20);
+      assert.ok(v >= prev - 1e-9, `${from}->${to} not monotonic at ${i / 20}`);
+      prev = v;
+    }
+    assert.ok(near(prev, 1, 1e-9), `${from}->${to} does not reach the end pose`);
+  }
+});
+
+test('hand openness blends across a segment into an open-hand technique', () => {
+  const clip = buildClip([
+    { time: 0, parts: ['seisanDachiR', 'chamberR'], ease: 'soft' },
+    { time: 1, parts: ['seisanDachiR', 'shutoLowR'], ease: 'soft' },
+  ], POSES, { hold: 0 });
+  assert.deepEqual(sampleClip(clip, 0).hands, { L: 0, R: 0 });
+  assert.deepEqual(sampleClip(clip, 1).hands, { L: 0, R: 1 });
+  const midR = sampleClip(clip, 0.5).hands.R;
+  assert.ok(midR > 0 && midR < 1, `mid hand blend ${midR}`);
 });
 
 test('sampling is pure — same t gives identical pose', () => {
@@ -79,6 +231,22 @@ test('embusen root interpolates and facing takes shortest path', () => {
   const facing = ((p.embusen.facing % (Math.PI * 2)) + Math.PI * 2) % (Math.PI * 2);
   assert.ok(facing > 6.0 || facing < 0.3, `facing ${facing} took the long way around`);
 });
+
+test('buildClip derives ease from pose names and inserts holds in clip units', () => {
+  const clip = buildClip([
+    { time: 0, parts: ['ready', 'guardBoth'] },
+    { time: 0.4, parts: ['seisanDachiR', 'punchMidR', 'guardChestL'] },
+    { time: 1, parts: ['seisanDachiR', 'chamberR', 'guardChestL'] },
+  ], POSES, { hold: 0.1 });
+  assert.deepEqual(clip.map(k => [+k.time.toFixed(6), k.ease, !!k.holdEnd]), [
+    [0, 'soft', false], [0.4, 'kime', false], [0.5, 'soft', true], [1, 'soft', false],
+  ]);
+  assertQuatNear(sampleClip(clip, 0.45).joints.shoulderR, eulerXYZToQuat(POSES.punchMidR.joints.shoulderR));
+});
+
+// ---------------------------------------------------------------------------
+// Steps and player
+// ---------------------------------------------------------------------------
 
 test('stepAt finds the right step, clamped at edges', () => {
   const tl = buildTimeline(kata, POSES);

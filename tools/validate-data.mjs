@@ -13,6 +13,9 @@ export const ALLOWED_ATTACKS = [
   'grabWristR', 'grabLapel', 'grabRear', 'chokeFront', 'sweepLow', 'none',
 ];
 
+const EASES = ['kime', 'soft', 'pass'];
+const LOOKS = ['left', 'right', 'none'];
+
 export function loadKata(file) {
   return JSON.parse(readFileSync(join(ROOT, 'kata-viewer', 'data', file), 'utf8'));
 }
@@ -35,6 +38,7 @@ export function validateKata(kata, file) {
       || typeof s.embusen.facing !== 'number') err(`${at}: bad embusen`);
     if (!s.transition || typeof s.transition.known !== 'boolean') err(`${at}: missing transition.known`);
     if (s.kiai) kiaiCount++;
+    if (s.look !== undefined && !LOOKS.includes(s.look)) err(`${at}: bad look "${s.look}" (left|right|none)`);
     if (!Array.isArray(s.keyframes) || s.keyframes.length < 2) {
       err(`${at}: needs >= 2 keyframes`);
       continue;
@@ -44,6 +48,8 @@ export function validateKata(kata, file) {
       if (typeof kf.t !== 'number' || kf.t < 0 || kf.t > 1) err(`${at}: keyframe t out of [0,1]`);
       if (kf.t <= prevT) err(`${at}: keyframe t not ascending`);
       prevT = kf.t;
+      if (kf.ease !== undefined && !EASES.includes(kf.ease)) err(`${at}: bad ease "${kf.ease}" (kime|soft|pass)`);
+      if (kf.hold !== undefined && !(typeof kf.hold === 'number' && kf.hold >= 0)) err(`${at}: bad hold "${kf.hold}" (beats >= 0)`);
       for (const name of [kf.stance, ...(kf.arms || []), ...(kf.legs || [])]) {
         if (name && !POSES[name]) err(`${at}: unknown pose "${name}"`);
       }

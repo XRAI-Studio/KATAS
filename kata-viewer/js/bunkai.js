@@ -1,10 +1,12 @@
 import { createKarateka } from './avatar.js';
-import { POSES, composePose } from './poses.js';
+import { POSES } from './poses.js';
+import { buildClip, sampleClip } from './player.js';
 
 // Bunkai attacker: dark-gi karateka who performs the recorded attack for the
 // current step, as a pure function of the step's local progress u ∈ [0,1].
 
-// Each attack: keyframes of [u, partials...] resolved via composePose.
+// Each attack: keyframes of [u, pose names]; built into clips with the same
+// kime/hold/curve semantics as the performer's timeline (times in step-local u).
 const ATTACKS = {
   steppingPunchR: [
     [0, ['ready', 'guardBoth']],
@@ -74,33 +76,14 @@ const ATTACKS = {
   ],
 };
 
-const smooth = (u) => u * u * (3 - 2 * u);
+const ATTACK_HOLD = 0.1;   // fraction of the step a landed attack is held
+const CLIPS = {};
+for (const [name, kfs] of Object.entries(ATTACKS)) {
+  CLIPS[name] = buildClip(kfs.map(([time, parts]) => ({ time, parts })), POSES, { hold: ATTACK_HOLD });
+}
 
 function sampleAttack(name, u) {
-  const kfs = ATTACKS[name] || ATTACKS.none;
-  let i = 0;
-  while (i < kfs.length - 2 && kfs[i + 1][0] <= u) i++;
-  const [ta, namesA] = kfs[i];
-  const [tb, namesB] = kfs[i + 1];
-  const span = tb - ta;
-  const w = span > 1e-9 ? smooth(Math.min(1, Math.max(0, (u - ta) / span))) : 1;
-  const a = composePose(...namesA.map(n => POSES[n]));
-  const b = composePose(...namesB.map(n => POSES[n]));
-  const joints = {};
-  for (const n of Object.keys(a.joints)) {
-    joints[n] = {
-      x: a.joints[n].x + (b.joints[n].x - a.joints[n].x) * w,
-      y: a.joints[n].y + (b.joints[n].y - a.joints[n].y) * w,
-      z: a.joints[n].z + (b.joints[n].z - a.joints[n].z) * w,
-    };
-  }
-  const root = {
-    x: a.root.x + (b.root.x - a.root.x) * w,
-    y: a.root.y + (b.root.y - a.root.y) * w,
-    z: a.root.z + (b.root.z - a.root.z) * w,
-    ry: a.root.ry + (b.root.ry - a.root.ry) * w,
-  };
-  return { joints, root };
+  return sampleClip(CLIPS[name] || CLIPS.none, u);
 }
 
 export function initBunkai(scene) {
