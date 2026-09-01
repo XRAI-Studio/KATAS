@@ -114,7 +114,7 @@
       "embusen": { "x": 0.05, "z": 1.6, "facing": 0 },
       "keyframes": [
         { "t": 0, "stance": "catL", "arms": ["blockMidL", "guardChestR"] },
-        { "t": 0.35, "stance": "ready", "arms": ["guardBoth"], "legs": ["jumpKickR"] },
+        { "t": 0.35, "stance": "ready", "arms": ["guardBoth"], "legs": ["jumpKickR"], "ease": "pass" },
         { "t": 0.65, "stance": "seisanDachiL", "arms": ["guardBoth"] },
         { "t": 1, "stance": "seisanDachiL", "arms": ["xBlockLow"] }
       ],

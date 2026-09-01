@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   buildTimeline, samplePose, stepAt, Player, SECONDS_PER_BEAT,
-  buildClip, sampleClip, KIME_HOLD_BEATS,
+  buildClip, sampleClip, KIME_HOLD_BEATS, LOOK_YAW,
 } from '../kata-viewer/js/player.js';
 import { POSES } from '../kata-viewer/js/poses.js';
 import { eulerXYZToQuat, quatToEulerXYZ } from '../kata-viewer/js/quat.js';
@@ -152,7 +152,7 @@ test('samplePose returns joint quaternions equal to the keyframe pose at keyfram
 test('the pose is constant through a hold', () => {
   const tl = buildTimeline(kata, POSES);
   const hold = KIME_HOLD_BEATS * SECONDS_PER_BEAT;
-  assert.deepEqual(samplePose(tl, 2 + hold / 2), samplePose(tl, 2));
+  // (the hold at t=2 precedes a 180° turn and so carries a look — tested below)
   assert.deepEqual(samplePose(tl, 4 + hold * 0.9), samplePose(tl, 4));
 });
 
@@ -306,4 +306,84 @@ test('onKiai fires when playback crosses a kiai step start, not when scrubbing',
   p.play();
   p.tick(2 * SECONDS_PER_BEAT + 0.01);
   assert.deepEqual(kiais, [2]);
+});
+
+// ---------------------------------------------------------------------------
+// Look-ahead before turns
+// ---------------------------------------------------------------------------
+
+const turnKata = (facing2, opts = {}) => ({
+  name: 'Turn', steps: [
+    { id: 1, label: 'a', coachCall: 'a', beats: 2, embusen: { x: 0, z: 0, facing: 0 },
+      keyframes: [
+        { t: 0, stance: 'ready' },
+        { t: 1, stance: 'seisanDachiL', arms: ['punchMidR'], ...(opts.lastKf || {}) },
+      ], transition: { known: true } },
+    { id: 2, label: 'b', coachCall: 'b', beats: 2, embusen: { x: 0, z: 0, facing: facing2 }, ...(opts.step2 || {}),
+      keyframes: [
+        { t: 0, stance: 'seisanDachiR', arms: ['blockMidR'] },
+        { t: 1, stance: 'seisanDachiR', arms: ['punchMidL'] },
+      ], transition: { known: true } },
+  ],
+});
+const headYawAtHoldEnd = (tl) => quatToEulerXYZ(tl.kfs.find(k => k.holdEnd).pose.joints.head).y;
+const IDENTITY = { x: 0, y: 0, z: 0, w: 1 };
+
+test('before a left turn the head looks left on the hold-end frame of the previous step', () => {
+  const tl = buildTimeline(turnKata(Math.PI / 2), POSES);
+  assert.ok(near(headYawAtHoldEnd(tl), LOOK_YAW), `yaw ${headYawAtHoldEnd(tl)}`);
+  // body is unchanged on that frame and the next step starts with the head straight
+  const kime = tl.kfs[1], hold = tl.kfs[2];
+  assertQuatNear(hold.pose.joints.shoulderR, kime.pose.joints.shoulderR);
+  assertQuatNear(tl.kfs[3].pose.joints.head, IDENTITY);
+});
+
+test('before a right turn (shortest path clockwise) the head looks right', () => {
+  const tl = buildTimeline(turnKata(3 * Math.PI / 2), POSES);
+  assert.ok(near(headYawAtHoldEnd(tl), -LOOK_YAW), `yaw ${headYawAtHoldEnd(tl)}`);
+});
+
+test('a 180° turn authored as 3.1416 (slightly more than π) still defaults to looking left', () => {
+  // The kata files round facings to 4 decimals; 3.1416 > Math.PI, so a naive
+  // shortest-path sign would send the head right.
+  assert.ok(near(headYawAtHoldEnd(buildTimeline(turnKata(3.1416), POSES)), LOOK_YAW));
+  assert.ok(near(headYawAtHoldEnd(buildTimeline(turnKata(-3.1416), POSES)), LOOK_YAW));
+});
+
+test('no facing change: no look is injected', () => {
+  const tl = buildTimeline(turnKata(0), POSES);
+  assertQuatNear(tl.kfs.find(k => k.holdEnd).pose.joints.head, IDENTITY);
+});
+
+test('an authored head override on the last keyframe is respected', () => {
+  const tl = buildTimeline(turnKata(Math.PI / 2, { lastKf: { overrides: { head: { y: -0.5 } } } }), POSES);
+  assert.ok(near(headYawAtHoldEnd(tl), -0.5), `yaw ${headYawAtHoldEnd(tl)}`);
+});
+
+test('the entered step\'s look attribute overrides the direction and can disable the look', () => {
+  assert.ok(near(headYawAtHoldEnd(buildTimeline(turnKata(Math.PI, { step2: { look: 'right' } }), POSES)), -LOOK_YAW));
+  assert.ok(near(headYawAtHoldEnd(buildTimeline(turnKata(Math.PI), POSES)), LOOK_YAW), '180 defaults to left');
+  assertQuatNear(buildTimeline(turnKata(Math.PI / 2, { step2: { look: 'none' } }), POSES).kfs.find(k => k.holdEnd).pose.joints.head, IDENTITY);
+});
+
+test('the look attribute forces a look even when facing does not change (Seisan 12/15/18)', () => {
+  assert.ok(near(headYawAtHoldEnd(buildTimeline(turnKata(0, { step2: { look: 'right' } }), POSES)), -LOOK_YAW));
+  assert.ok(near(headYawAtHoldEnd(buildTimeline(turnKata(0, { step2: { look: 'left' } }), POSES)), LOOK_YAW));
+});
+
+test('a soft last keyframe still gets a look frame before the turn', () => {
+  const tl = buildTimeline(turnKata(Math.PI / 2, { lastKf: { ease: 'soft' } }), POSES);
+  const look = tl.kfs.find(k => k.holdEnd);
+  assert.ok(look, 'a look frame was inserted');
+  assert.ok(near(quatToEulerXYZ(look.pose.joints.head).y, LOOK_YAW));
+  assert.ok(look.time > tl.kfs[1].time && look.time < tl.kfs[3].time, 'between the last kf and the next step');
+});
+
+test('the head turns during the hold while the body stays put', () => {
+  const tl = buildTimeline(turnKata(Math.PI / 2), POSES);
+  const t0 = tl.kfs[1].time, t1 = tl.kfs[2].time;
+  const mid = samplePose(tl, (t0 + t1) / 2);
+  const yaw = quatToEulerXYZ(mid.joints.head).y;
+  assert.ok(yaw > 0 && yaw < LOOK_YAW, `mid yaw ${yaw}`);
+  assertQuatNear(mid.joints.shoulderR, tl.kfs[1].pose.joints.shoulderR);
 });

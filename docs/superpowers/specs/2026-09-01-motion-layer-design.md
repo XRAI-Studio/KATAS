@@ -40,7 +40,9 @@ Per keyframe (`data/*.json`):
   to the next keyframe.
 
 Per step:
-- `"look": "left" | "right" | "none"` — override for auto look-ahead before a facing change.
+- `"look": "left" | "right" | "none"` — on the step being **entered**: forces a look in that direction at
+  the end of the previous step (even without a facing change — Seisan 12/15/18 "look over the shoulder,
+  step back"), or suppresses the automatic one.
 
 Per pose (`poses.js`, authoring metadata, mirrored with the pose):
 - `hands: { L?: 'open'|'fist', R?: 'open'|'fist' }` on arm poses that are open-hand.

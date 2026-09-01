@@ -69,7 +69,10 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
   nose.position.set(0, 0.09, 0.115);
   head.add(nose);
 
-  // Arms — gi sleeves on upper arm, skin forearm, fist sphere
+  // Arms — gi sleeves on upper arm, skin forearm, then two hands per wrist:
+  // a fist sphere and an open knife-hand (thin across x: palm faces sideways,
+  // thumb up, when the arm is extended forward). setPose cross-scales them.
+  const hands = {};
   for (const side of ['L', 'R']) {
     const sx = side === 'L' ? 1 : -1;
     const shoulder = j('shoulder' + side, chest, sx * 0.24, 0.24, 0);
@@ -80,6 +83,16 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
     const fist = new THREE.Mesh(new THREE.SphereGeometry(0.055, 10, 8), skinMat);
     fist.position.y = -0.03; fist.castShadow = true;
     wrist.add(fist);
+    const open = new THREE.Group();
+    const palm = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.11, 0.07), skinMat);
+    palm.position.y = -0.055; palm.castShadow = true;
+    open.add(palm);
+    const thumb = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.045, 0.02), skinMat);
+    thumb.position.set(0, -0.03, 0.045);
+    open.add(thumb);
+    open.scale.setScalar(0.01);
+    wrist.add(open);
+    hands[side] = { fist, open };
   }
 
   // Legs — gi pants, bare feet boxes
@@ -108,6 +121,13 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
     if (pose.root) {
       body.position.set(pose.root.x || 0, HIPS_Y + (pose.root.y || 0), pose.root.z || 0);
       body.rotation.y = pose.root.ry || 0;
+    }
+    if (pose.hands) {
+      for (const side of ['L', 'R']) {
+        const open = Math.min(1, Math.max(0, pose.hands[side] ?? 0));   // 0 = fist, 1 = open
+        hands[side].fist.scale.setScalar(Math.max(0.01, 1 - open));
+        hands[side].open.scale.setScalar(Math.max(0.01, open));
+      }
     }
   }
 

@@ -13,6 +13,13 @@ export const KIME_HOLD_BEATS = 0.3;
 // A hold may take at most this fraction of the gap to the next keyframe.
 const MAX_HOLD_FRACTION = 0.5;
 
+// "Look before turning": before a step that changes facing by more than
+// LOOK_MIN_TURN, the head yaws toward the turn on the hold-end frame of the
+// previous step. +y = look left (toward +X). A step's `look` attribute forces
+// ("left"/"right") or suppresses ("none") the look regardless of facing.
+export const LOOK_YAW = 0.85;
+const LOOK_MIN_TURN = Math.PI / 9;
+
 // Segment curves — all monotonic on [0,1] with f(0)=0, f(1)=1 (no overshoot),
 // so a sample always lies between its two keyframes.
 const CURVES = {
@@ -82,19 +89,47 @@ function deriveEase(kf, prev) {
   return 'soft';
 }
 
+const isIdentityQuat = (q) => Math.abs(q.w) > 1 - 1e-9;
+
+function shortestTurn(from, to) {
+  const TAU = Math.PI * 2;
+  let d = (to - from) % TAU;
+  if (d > Math.PI) d -= TAU;
+  if (d < -Math.PI) d += TAU;
+  return d;
+}
+
+// Head yaw to apply at the end of `cur` before entering `next`, or 0.
+function lookYawBefore(cur, next) {
+  if (next.look === 'none') return 0;
+  if (next.look === 'left') return LOOK_YAW;
+  if (next.look === 'right') return -LOOK_YAW;
+  const d = shortestTurn(cur.embusen.facing, next.embusen.facing);
+  if (Math.abs(d) <= LOOK_MIN_TURN) return 0;
+  if (Math.abs(Math.abs(d) - Math.PI) < 1e-3) return LOOK_YAW;   // 180° (data rounds to 4 dp): left by default
+  return Math.sign(d) * LOOK_YAW;
+}
+
 // Second pass over the finished list: a kime keyframe is followed by a
 // hold-end keyframe with the same pose. The hold never reaches past half the
 // gap to the next keyframe, and the final keyframe holds implicitly.
+// A keyframe carrying `lookYaw` turns the head on its hold-end frame (the
+// body stays put); if it is not kime, a hold-end frame is inserted for it.
 function insertHolds(kfs, defaultHold) {
   const out = [];
   for (let i = 0; i < kfs.length; i++) {
     const kf = kfs[i];
     out.push(kf);
-    if (kf.ease !== 'kime' || i === kfs.length - 1) continue;
+    if (i === kfs.length - 1) continue;
+    if (kf.ease !== 'kime' && !kf.lookYaw) continue;
     const gap = kfs[i + 1].time - kf.time;
     const h = Math.min(kf.hold ?? defaultHold, gap * MAX_HOLD_FRACTION);
     if (h <= 1e-9) continue;
-    out.push({ ...kf, time: kf.time + h, ease: 'soft', hold: undefined, holdEnd: true });
+    const end = { ...kf, time: kf.time + h, ease: 'soft', hold: undefined, holdEnd: true, lookYaw: undefined };
+    if (kf.lookYaw) {
+      end.pose = { ...kf.pose, joints: { ...kf.pose.joints, head: eulerXYZToQuat({ y: kf.lookYaw }) } };
+    }
+    out.push(end);
   }
   return out;
 }
@@ -112,6 +147,7 @@ export function buildClip(entries, poseLib, { hold = 0 } = {}) {
 export function buildTimeline(kata, poseLib) {
   const steps = [];
   const kfs = [];
+  const lastKfOfStep = [];
   let cursor = 0;
   for (const step of kata.steps) {
     const dur = (step.beats ?? DEFAULT_BEATS) * SECONDS_PER_BEAT;
@@ -124,6 +160,7 @@ export function buildTimeline(kata, poseLib) {
       unverified: step.transition ? step.transition.known === false : false,
       bunkai: step.bunkai || { known: false },
       embusen,
+      look: step.look,
     });
     for (const kf of step.keyframes) {
       let time = start + kf.t * dur;
@@ -140,7 +177,13 @@ export function buildTimeline(kata, poseLib) {
         embusen,
       }, poseLib));
     }
+    lastKfOfStep.push(kfs[kfs.length - 1]);
     cursor = end;
+  }
+  for (let i = 0; i + 1 < kata.steps.length; i++) {
+    const yaw = lookYawBefore(steps[i], steps[i + 1]);
+    const kf = lastKfOfStep[i];
+    if (yaw && isIdentityQuat(kf.pose.joints.head)) kf.lookYaw = yaw;   // authored head wins
   }
   return { duration: cursor, steps, kfs: finalize(kfs, KIME_HOLD_BEATS * SECONDS_PER_BEAT) };
 }

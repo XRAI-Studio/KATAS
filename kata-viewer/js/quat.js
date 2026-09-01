@@ -18,6 +18,7 @@ export function eulerXYZToQuat(e) {
 export function slerp(a, b, t) {
   if (t <= 0) return { x: a.x, y: a.y, z: a.z, w: a.w };
   if (t >= 1) return { x: b.x, y: b.y, z: b.z, w: b.w };
+  if (a.x === b.x && a.y === b.y && a.z === b.z && a.w === b.w) return { x: a.x, y: a.y, z: a.z, w: a.w };
   let bx = b.x, by = b.y, bz = b.z, bw = b.w;
   let cos = a.x * bx + a.y * by + a.z * bz + a.w * bw;
   if (cos < 0) { cos = -cos; bx = -bx; by = -by; bz = -bz; bw = -bw; }

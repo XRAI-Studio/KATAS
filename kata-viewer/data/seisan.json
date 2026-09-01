@@ -119,7 +119,7 @@
       ],
       "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 0, "z": 2.4, "facing": 3.1416 }, "text": "Finish the attacker, then root in Seiunchin; the drop can be a takedown mechanic." },
       "transition": { "known": true, "source": "Seisan.md step 11" } },
-    { "id": 12, "label": "Step back to cat — catch", "coachCall": "Look right. Back to cat stance. Catch.", "beats": 2, "kiai": false,
+    { "id": 12, "label": "Step back to cat — catch", "coachCall": "Look right. Back to cat stance. Catch.", "beats": 2, "kiai": false, "look": "right",
       "embusen": { "x": 0, "z": 1.0, "facing": 0 },
       "keyframes": [
         { "t": 0, "stance": "catL", "arms": ["guardBoth"], "overrides": { "head": { "y": -0.8 } } },
@@ -148,7 +148,7 @@
       ],
       "bunkai": { "known": true, "attack": "frontKickR", "attackerFrom": { "x": -0.2, "z": 2.5, "facing": 3.1416 }, "text": "Enter with a kick, drop their attack, finish and root." },
       "transition": { "known": true, "source": "Seisan.md step 14" } },
-    { "id": 15, "label": "Step back to cat — catch", "coachCall": "Look left. Back to cat. Catch.", "beats": 2, "kiai": false,
+    { "id": 15, "label": "Step back to cat — catch", "coachCall": "Look left. Back to cat. Catch.", "beats": 2, "kiai": false, "look": "left",
       "embusen": { "x": -0.2, "z": 1.1, "facing": 0 },
       "keyframes": [
         { "t": 0, "stance": "catR", "arms": ["guardBoth"], "overrides": { "head": { "y": 0.8 } } },
@@ -177,7 +177,7 @@
       ],
       "bunkai": { "known": true, "attack": "frontKickL", "attackerFrom": { "x": 0.1, "z": 2.6, "facing": 3.1416 }, "text": "Mirror of 14: entry, kick, low-line defense, finish." },
       "transition": { "known": true, "source": "Seisan.md step 17" } },
-    { "id": 18, "label": "Step back to cat — catch", "coachCall": "Look right. Back to cat. Catch.", "beats": 2, "kiai": false,
+    { "id": 18, "label": "Step back to cat — catch", "coachCall": "Look right. Back to cat. Catch.", "beats": 2, "kiai": false, "look": "right",
       "embusen": { "x": 0.1, "z": 1.2, "facing": 0 },
       "keyframes": [
         { "t": 0, "stance": "catL", "arms": ["guardBoth"], "overrides": { "head": { "y": -0.8 } } },

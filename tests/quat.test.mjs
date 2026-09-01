@@ -62,9 +62,9 @@ test('slerp takes the shortest path when the target is the negated quaternion', 
   assertSameRotation(slerp(a, negB, 0.5), eulerXYZToQuat({ x: 0.5, y: 0, z: 0 }));
 });
 
-test('slerp of identical quaternions is stable', () => {
+test('slerp of identical quaternions returns the input exactly', () => {
   const a = eulerXYZToQuat({ x: 0.3, y: 0.2, z: -0.1 });
-  assertQuatNear(slerp(a, { ...a }, 0.5), a);
+  for (const u of [0.1, 0.5, 0.9]) assert.deepEqual(slerp(a, { ...a }, u), a);
 });
 
 test('quatToEulerXYZ round-trips eulerXYZToQuat within the principal range', () => {
