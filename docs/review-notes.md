@@ -10,6 +10,9 @@ change, each with a link to the moment. Claude reads this file at the start of t
    bunkai state, e.g. `http://localhost:8420/?kata=seisan&t=16.60&cam=side`.
 3. Paste it into a bullet below with *what it should be* (not only what is wrong).
 
+If the **Copy link** button or the `t = … s` readout is missing, hard-refresh once (**Ctrl+F5**) —
+the browser may still be holding the previous version of the viewer's files.
+
 The HUD also shows the step ("7 / 23 — …") and `t = 16.6 s` if you would rather type them.
 Links keep working on the deployed site — only the host changes.
 
