@@ -127,9 +127,11 @@ New pure module `kata-viewer/js/rig.js` exporting the skeleton offsets/limb leng
 `avatar.js` (`HIPS_Y`, `THIGH`, `SHIN`, hip/knee/ankle offsets, foot sole offset) and `footSoleY(pose)`:
 forward kinematics of both legs in pose-root space returning the lower sole height. `avatar.js` builds
 its geometry from `rig.js` so the two can't drift. In the shared `sampleClip` path (so the bunkai
-attacker is clamped too — attacks have no airborne poses), after blending: unless the frame is airborne
-(either endpoint airborne → blend the correction to 0), shift `root.y` so the lower sole sits at y=0.
-Removes floating/sinking through every stance transition and drop.
+attacker is clamped too — attacks have no airborne poses), after blending: the sample carries
+`air` (0..1, the blended airborne weight of its two keyframes) and `root.y` is shifted by
+`−footSoleY · (1 − air)`, so grounded frames rest the lower sole exactly at y=0 while an airborne
+keyframe keeps its authored lift and the correction fades in/out around it. Removes floating/sinking
+through every stance transition and drop; the authored per-stance `root.y` values become hints only.
 
 ### Stretch (separate task, only if phases 1–3 look right): foot lock during steps
 

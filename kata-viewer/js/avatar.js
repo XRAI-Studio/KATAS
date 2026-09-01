@@ -1,12 +1,13 @@
 import * as THREE from 'three';
+import { RIG } from './rig.js';
 
 // Procedural karateka. Joint pivots are Groups; meshes hang off them.
 // Outer `group` carries embusen placement (set by the app);
 // inner `body` carries pose root offsets (set by setPose).
+// Skeleton dimensions come from rig.js, which the sampler's ground clamp
+// also uses, so the feet the player computes are the feet you see.
 
-const HIPS_Y = 0.95;          // standing hip height
-const THIGH = 0.42, SHIN = 0.40;
-const UPPER_ARM = 0.28, FOREARM = 0.26;
+const { HIPS_Y, THIGH, SHIN, UPPER_ARM, FOREARM } = RIG;
 
 function limbMesh(mat, radius, length) {
   const geo = new THREE.CapsuleGeometry(radius, length - radius * 2, 4, 8);
@@ -98,13 +99,14 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
   // Legs — gi pants, bare feet boxes
   for (const side of ['L', 'R']) {
     const sx = side === 'L' ? 1 : -1;
-    const hip = j('hip' + side, hips, sx * 0.11, -0.05, 0);
+    const hip = j('hip' + side, hips, sx * RIG.HIP.x, RIG.HIP.y, RIG.HIP.z);
     hip.add(limbMesh(giMat, 0.075, THIGH));
     const knee = j('knee' + side, hip, 0, -THIGH, 0);
     knee.add(limbMesh(giMat, 0.06, SHIN));
     const ankle = j('ankle' + side, knee, 0, -SHIN, 0);
-    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.10, 0.055, 0.22), skinMat);
-    foot.position.set(0, -0.08, 0.05); foot.castShadow = true;
+    const F = RIG.FOOT;
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(F.w, F.h, F.l), skinMat);
+    foot.position.set(0, F.y, F.z); foot.castShadow = true;
     ankle.add(foot);
   }
 

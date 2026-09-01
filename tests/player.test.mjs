@@ -6,6 +6,7 @@ import {
 } from '../kata-viewer/js/player.js';
 import { POSES } from '../kata-viewer/js/poses.js';
 import { eulerXYZToQuat, quatToEulerXYZ } from '../kata-viewer/js/quat.js';
+import { footSoleY } from '../kata-viewer/js/rig.js';
 
 const near = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
 function assertQuatNear(q, ref, eps = 1e-9) {
@@ -386,4 +387,41 @@ test('the head turns during the hold while the body stays put', () => {
   const yaw = quatToEulerXYZ(mid.joints.head).y;
   assert.ok(yaw > 0 && yaw < LOOK_YAW, `mid yaw ${yaw}`);
   assertQuatNear(mid.joints.shoulderR, tl.kfs[1].pose.joints.shoulderR);
+});
+
+// ---------------------------------------------------------------------------
+// Ground clamp
+// ---------------------------------------------------------------------------
+
+test('sampled poses stand on the floor: the lower sole is at y=0', () => {
+  const tl = buildTimeline(kata, POSES);
+  for (const t of [0, 0.7, 1.5, 2, 2.2, 3.4, 4, 5.1, 6]) {
+    const s = footSoleY(samplePose(tl, t));
+    assert.ok(Math.abs(s) < 1e-9, "sole at t=" + t + " is " + s);
+  }
+});
+
+test('airborne poses keep their authored root lift; the clamp fades in and out around them', () => {
+  const clip = buildClip([
+    { time: 0, parts: ['feetTogether'], ease: 'soft' },
+    { time: 1, parts: ['feetTogether', 'jumpKickR'] },
+    { time: 2, parts: ['feetTogether'], ease: 'soft' },
+  ], POSES, { hold: 0 });
+  assert.ok(Math.abs(footSoleY(sampleClip(clip, 0))) < 1e-9, 'grounded at start');
+  const apex = sampleClip(clip, 1);
+  assert.equal(apex.root.y, POSES.jumpKickR.root.y);
+  assert.equal(apex.air, 1);
+  assert.ok(footSoleY(apex) > 0.05, "apex sole " + footSoleY(apex));
+  const mid = sampleClip(clip, 0.5);
+  assert.ok(mid.air > 0 && mid.air < 1, "mid air " + mid.air);
+  assert.ok(footSoleY(mid) > 0 && footSoleY(mid) < footSoleY(apex), "mid sole " + footSoleY(mid));
+  assert.ok(Math.abs(footSoleY(sampleClip(clip, 2))) < 1e-9, 'grounded at end');
+});
+
+test('the bunkai attacker clip is clamped too', () => {
+  const clip = buildClip([
+    { time: 0, parts: ['ready', 'guardBoth'] },
+    { time: 1, parts: ['seisanDachiR', 'punchMidR'] },
+  ], POSES, { hold: 0.1 });
+  for (const u of [0, 0.3, 0.6, 1]) assert.ok(Math.abs(footSoleY(sampleClip(clip, u))) < 1e-9, "u=" + u);
 });

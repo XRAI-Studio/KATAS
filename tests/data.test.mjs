@@ -36,6 +36,7 @@ test('validateKata rejects bad ease, hold and look values and accepts good ones'
 });
 
 import { samplePose } from '../kata-viewer/js/player.js';
+import { footSoleY } from '../kata-viewer/js/rig.js';
 
 for (const file of KATA_FILES) {
   test(`${file} samples cleanly at 20 Hz over its whole duration`, () => {
@@ -49,6 +50,8 @@ for (const file of KATA_FILES) {
       for (const k of ['x', 'y', 'z', 'ry']) assert.ok(Number.isFinite(p.root[k]), `${file} t=${t.toFixed(2)} root.${k}`);
       for (const k of ['x', 'z', 'facing']) assert.ok(Number.isFinite(p.embusen[k]), `${file} t=${t.toFixed(2)} embusen.${k}`);
       for (const s of ['L', 'R']) assert.ok(p.hands[s] >= 0 && p.hands[s] <= 1, `${file} t=${t.toFixed(2)} hands.${s}=${p.hands[s]}`);
+      assert.ok(p.air >= 0 && p.air <= 1, `${file} t=${t.toFixed(2)} air=${p.air}`);
+      if (p.air === 0) assert.ok(Math.abs(footSoleY(p)) < 1e-6, `${file} t=${t.toFixed(2)} sole=${footSoleY(p)}`);
     }
   });
 }

@@ -1,6 +1,7 @@
 // Timeline playback engine — pure logic, no Three.js, no DOM (Node-testable).
 import { composePose, JOINT_NAMES } from './poses.js';
 import { eulerXYZToQuat, slerp } from './quat.js';
+import { footSoleY } from './rig.js';
 
 export const SECONDS_PER_BEAT = 1.0;
 const DEFAULT_BEATS = 2;
@@ -200,12 +201,19 @@ function lerpAngle(a, b, u) {
   return a + d * u;
 }
 
+// Ground clamp: shift the root so the lower sole rests on the floor. Faded
+// out around airborne keyframes, whose authored root lift is deliberate.
+function grounded(out) {
+  if (out.air < 1) out.root.y -= footSoleY(out) * (1 - out.air);
+  return out;
+}
+
 function snapshot(kf) {
   const joints = {};
   for (const n of JOINT_NAMES) joints[n] = { ...kf.pose.joints[n] };
-  const out = { root: { ...kf.pose.root }, joints, hands: { ...kf.pose.hands } };
+  const out = { root: { ...kf.pose.root }, joints, hands: { ...kf.pose.hands }, air: kf.pose.airborne ? 1 : 0 };
   if (kf.embusen) out.embusen = { ...kf.embusen };
-  return out;
+  return grounded(out);
 }
 
 // Pure function of time over a finalized keyframe list.
@@ -234,7 +242,8 @@ export function sampleClip(kfs, t) {
     L: lerp(a.pose.hands.L, b.pose.hands.L, u),
     R: lerp(a.pose.hands.R, b.pose.hands.R, u),
   };
-  const out = { root, joints, hands };
+  const air = lerp(a.pose.airborne ? 1 : 0, b.pose.airborne ? 1 : 0, u);
+  const out = { root, joints, hands, air };
   if (a.embusen && b.embusen) {
     out.embusen = {
       x: lerp(a.embusen.x, b.embusen.x, u),
@@ -242,7 +251,7 @@ export function sampleClip(kfs, t) {
       facing: lerpAngle(a.embusen.facing, b.embusen.facing, u),
     };
   }
-  return out;
+  return grounded(out);
 }
 
 export function samplePose(timeline, t) {
