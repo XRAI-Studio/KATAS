@@ -1,0 +1,224 @@
+{
+  "name": "Wansu",
+  "style": "Isshin Ryu",
+  "displayName": "Wansu (汪楫)",
+  "steps": [
+    { "id": 0, "label": "Ready — look left, guard set", "coachCall": "Ready. Look left.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "feetTogether", "arms": ["armsDown"] },
+        { "t": 0.4, "stance": "bow" },
+        { "t": 1, "stance": "ready", "arms": ["handsStacked"], "overrides": { "head": { "y": 0.8 } } }
+      ],
+      "bunkai": { "known": false },
+      "transition": { "known": true, "source": "wansu.md step 0" } },
+    { "id": 1, "label": "45° left — low block, punch", "coachCall": "Angle left. Low block. Punch.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0.3, "z": 0.3, "facing": 0.7854 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["blockLowL", "chamberR"] },
+        { "t": 0.6, "stance": "seisanDachiL", "arms": ["blockLowL", "punchMidR"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["blockLowL", "chamberR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 1.1, "z": 1.1, "facing": 3.927 }, "text": "Step off the line, clear the attack, counter punch (some do backfist)." },
+      "transition": { "known": true, "source": "wansu.md step 1" } },
+    { "id": 2, "label": "Front — low block, punch", "coachCall": "Face front. Step in. Low block. Punch.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0.3, "z": 1.0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["blockLowL", "chamberR"] },
+        { "t": 0.6, "stance": "seisanDachiL", "arms": ["blockLowL", "punchMidR"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["blockLowL", "chamberR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 0.3, "z": 2.2, "facing": 3.1416 }, "text": "Standard block–counter to the front." },
+      "transition": { "known": true, "source": "wansu.md step 2" } },
+    { "id": 3, "label": "Step in — side block, finger thrust", "coachCall": "Step. Open block. Finger thrust.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0.3, "z": 1.7, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiR", "arms": ["openHandBlockL", "chamberR"] },
+        { "t": 0.55, "stance": "seisanDachiR", "arms": ["openHandBlockL", "nukiteR"] },
+        { "t": 1, "stance": "seisanDachiR", "arms": ["guardChestL", "nukiteR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchL", "attackerFrom": { "x": 0.3, "z": 2.9, "facing": 3.1416 }, "text": "Deflect in, thrust to a soft target — solar plexus, neck, or groin." },
+      "transition": { "known": true, "source": "wansu.md step 3" } },
+    { "id": 4, "label": "Step behind — angle punch with pull", "coachCall": "Step behind. Pull. Punch.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0.0, "z": 1.5, "facing": -0.6 },
+      "keyframes": [
+        { "t": 0, "stance": "crossoverR", "arms": ["guardBoth"] },
+        { "t": 0.6, "stance": "seisanDachiR", "arms": ["grabPullL", "punchMidR"] },
+        { "t": 1, "stance": "seisanDachiR", "arms": ["grabPullL", "punchMidR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": -0.7, "z": 2.4, "facing": 2.5416 }, "text": "Off-line entry with hikite pull into a strong counter." },
+      "transition": { "known": true, "source": "wansu.md step 4" } },
+    { "id": 5, "label": "Left line — low block, punch", "coachCall": "Look left. Step. Low block. Punch.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0.9, "z": 1.5, "facing": 1.5708 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["blockLowL", "chamberR"] },
+        { "t": 0.6, "stance": "seisanDachiL", "arms": ["blockLowL", "punchMidR"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["blockLowL", "chamberR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 2.1, "z": 1.5, "facing": 4.7124 }, "text": "New attacker on the left line — mirror of step 2." },
+      "transition": { "known": true, "source": "wansu.md step 5" } },
+    { "id": 6, "label": "Step in — side block, finger thrust (mirror)", "coachCall": "Step. Open block. Finger thrust.", "beats": 3, "kiai": false,
+      "embusen": { "x": 1.5, "z": 1.5, "facing": 1.5708 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiR", "arms": ["openHandBlockR", "chamberL"] },
+        { "t": 0.55, "stance": "seisanDachiR", "arms": ["openHandBlockR", "nukiteL"] },
+        { "t": 1, "stance": "seisanDachiR", "arms": ["guardChestR", "nukiteL"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 2.7, "z": 1.5, "facing": 4.7124 }, "text": "Mirror of step 3: nukite into a soft target." },
+      "transition": { "known": true, "source": "wansu.md step 6" } },
+    { "id": 7, "label": "Step behind — angle punch with pull (mirror)", "coachCall": "Step behind. Pull. Punch.", "beats": 3, "kiai": false,
+      "embusen": { "x": 1.2, "z": 1.3, "facing": 0.9 },
+      "keyframes": [
+        { "t": 0, "stance": "crossoverL", "arms": ["guardBoth"] },
+        { "t": 0.6, "stance": "seisanDachiL", "arms": ["grabPullR", "punchMidL"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["grabPullR", "punchMidL"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchL", "attackerFrom": { "x": 2.1, "z": 2.2, "facing": 4.0416 }, "text": "Symmetrical off-line entry and counter." },
+      "transition": { "known": true, "source": "wansu.md step 7" } },
+    { "id": 8, "label": "Front — evade, punch, angle punch", "coachCall": "Face front. Slip. Punch. Angle punch.", "beats": 4, "kiai": false,
+      "embusen": { "x": 1.0, "z": 1.0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "feetTogether", "arms": ["guardBoth"] },
+        { "t": 0.4, "stance": "seisanDachiR", "arms": ["punchMidR", "guardChestL"] },
+        { "t": 1, "stance": "seisanDachiR", "arms": ["punchMidL", "guardChestR"], "overrides": { "chest": { "y": 0.35 } } }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 1.0, "z": 2.2, "facing": 3.1416 }, "text": "Get out of the way, then hit; angle to a secondary target." },
+      "transition": { "known": true, "source": "wansu.md step 8" } },
+    { "id": 9, "label": "Mirror evade and counters", "coachCall": "Step up. Slip. Punch. Angle punch.", "beats": 4, "kiai": false,
+      "embusen": { "x": 0.4, "z": 1.0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "feetTogether", "arms": ["guardBoth"] },
+        { "t": 0.4, "stance": "seisanDachiL", "arms": ["punchMidL", "guardChestR"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["punchMidR", "guardChestL"], "overrides": { "chest": { "y": -0.35 } } }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchL", "attackerFrom": { "x": 0.4, "z": 2.2, "facing": 3.1416 }, "text": "Evasive counter drill on the other side." },
+      "transition": { "known": true, "source": "wansu.md step 9" } },
+    { "id": 10, "label": "Advance — front kicks", "coachCall": "Front kick. Land. Front kick.", "beats": 4, "kiai": false,
+      "embusen": { "x": 0.4, "z": 1.8, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "ready", "arms": ["guardBoth"], "legs": ["frontKickR"] },
+        { "t": 0.45, "stance": "seisanDachiR", "arms": ["guardBoth"] },
+        { "t": 0.75, "stance": "ready", "arms": ["guardBoth"], "legs": ["frontKickL"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["guardBoth"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 0.4, "z": 3.0, "facing": 3.1416 }, "text": "Forward entry with kicks to stop the advance." },
+      "transition": { "known": true, "source": "wansu.md step 10" } },
+    { "id": 11, "label": "Stack the hands — set up the dump", "coachCall": "Stack the hands. Take hold.", "beats": 2, "kiai": false,
+      "embusen": { "x": 0.4, "z": 2.0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["guardBoth"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["handsStacked"] }
+      ],
+      "bunkai": { "known": true, "attack": "grabLapel", "attackerFrom": { "x": 0.4, "z": 3.0, "facing": 3.1416 }, "text": "Grabbing and head-control setup — the signature Wansu moment." },
+      "transition": { "known": true, "source": "wansu.md step 11" } },
+    { "id": 12, "label": "The Wansu dump — KIAI", "coachCall": "Load. Dump! Kiai!", "beats": 4, "kiai": true,
+      "embusen": { "x": 0.4, "z": 2.0, "facing": 3.1416 },
+      "keyframes": [
+        { "t": 0, "stance": "seiunchinDachi", "arms": ["dumpLoad"] },
+        { "t": 0.5, "stance": "seiunchinDachi", "arms": ["dumpLoad"] },
+        { "t": 1, "stance": "seiunchinDachi", "arms": ["dumpFinish"] }
+      ],
+      "bunkai": { "known": true, "attack": "grabLapel", "attackerFrom": { "x": 0.4, "z": 2.9, "facing": 3.1416 }, "text": "Kata garuma: grab high at the throat, hook low, lift and dump the attacker during the 180° pivot." },
+      "transition": { "known": true, "source": "wansu.md step 12; mechanics per isshinryukarate.net and isshin-concentration.blogspot.com; kiai on the dump" } },
+    { "id": 13, "label": "Recover — orient to the next attacker", "coachCall": "Recover. Look.", "beats": 2, "kiai": false,
+      "embusen": { "x": 0.4, "z": 1.8, "facing": 3.1416 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiR", "arms": ["guardChestL", "chamberR"], "overrides": { "head": { "y": 0.7 } } },
+        { "t": 1, "stance": "seisanDachiR", "arms": ["guardBoth"] }
+      ],
+      "bunkai": { "known": false },
+      "transition": { "known": true, "source": "wansu.md step 13" } },
+    { "id": 14, "label": "Left side — open block, punch, knee", "coachCall": "Step left. Open block. Punch. Knee.", "beats": 4, "kiai": false,
+      "embusen": { "x": -0.2, "z": 1.8, "facing": 4.7124 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["openHandBlockL", "chamberR"] },
+        { "t": 0.4, "stance": "seisanDachiL", "arms": ["openHandBlockL", "punchMidR"] },
+        { "t": 0.7, "stance": "seisanDachiL", "arms": ["guardBoth"], "legs": ["kneeLiftR"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["punchMidR", "guardChestL"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": -1.4, "z": 1.8, "facing": 1.5708 }, "text": "Side entry with block, punch, and knee strike." },
+      "transition": { "known": true, "source": "wansu.md step 14" } },
+    { "id": 15, "label": "Right side — mirror block, punch, knee", "coachCall": "Step right. Open block. Punch. Knee.", "beats": 4, "kiai": false,
+      "embusen": { "x": 1.0, "z": 1.8, "facing": 1.5708 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiR", "arms": ["openHandBlockR", "chamberL"] },
+        { "t": 0.4, "stance": "seisanDachiR", "arms": ["openHandBlockR", "punchMidL"] },
+        { "t": 0.7, "stance": "seisanDachiR", "arms": ["guardBoth"], "legs": ["kneeLiftL"] },
+        { "t": 1, "stance": "seisanDachiR", "arms": ["punchMidL", "guardChestR"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchL", "attackerFrom": { "x": 2.2, "z": 1.8, "facing": 4.7124 }, "text": "Mirror of step 14 on the opposite side." },
+      "transition": { "known": true, "source": "wansu.md step 15" } },
+    { "id": 16, "label": "Step out — evade, face punch, angle punch", "coachCall": "Step up. Slip. Punch. Angle punch.", "beats": 4, "kiai": false,
+      "embusen": { "x": 0.4, "z": 1.6, "facing": 3.1416 },
+      "keyframes": [
+        { "t": 0, "stance": "feetTogether", "arms": ["guardBoth"] },
+        { "t": 0.4, "stance": "seisanDachiR", "arms": ["punchHighR", "guardChestL"] },
+        { "t": 1, "stance": "seisanDachiR", "arms": ["punchMidL", "guardChestR"], "overrides": { "chest": { "y": 0.35 } } }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 0.4, "z": 0.4, "facing": 0 }, "text": "Evade, counter to the face, then hit the secondary line." },
+      "transition": { "known": true, "source": "wansu.md step 16 (file truncates during step 17)" } },
+    { "id": 17, "label": "Left side blade kick with catch (reconstructed)", "coachCall": "Side kick. Catch.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0.4, "z": 1.4, "facing": 3.1416 },
+      "keyframes": [
+        { "t": 0, "stance": "ready", "arms": ["guardBoth"] },
+        { "t": 0.5, "stance": "ready", "arms": ["grabPullL", "guardChestR"], "legs": ["sideKickL"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["guardBoth"] }
+      ],
+      "bunkai": { "known": false },
+      "transition": { "known": false, "source": "Reconstructed from MIT Isshinryu Club + isshinryukarate.net; linking footwork from step 16 is UNVERIFIED" } },
+    { "id": 18, "label": "Right side blade kick with catch (reconstructed)", "coachCall": "Side kick. Catch.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0.4, "z": 1.2, "facing": 3.1416 },
+      "keyframes": [
+        { "t": 0, "stance": "ready", "arms": ["guardBoth"] },
+        { "t": 0.5, "stance": "ready", "arms": ["grabPullR", "guardChestL"], "legs": ["sideKickR"] },
+        { "t": 1, "stance": "seisanDachiR", "arms": ["guardBoth"] }
+      ],
+      "bunkai": { "known": false },
+      "transition": { "known": false, "source": "Reconstructed; sequence order between sources differs — UNVERIFIED" } },
+    { "id": 19, "label": "Slow guard — right elbow smash (reconstructed)", "coachCall": "Guard... elbow smash.", "beats": 4, "kiai": false,
+      "embusen": { "x": 0.4, "z": 0.9, "facing": 3.1416 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["guardBoth"] },
+        { "t": 0.6, "stance": "seisanDachiL", "arms": ["openHandBlockL", "openHandBlockR"] },
+        { "t": 1, "stance": "seisanDachiL", "arms": ["guardChestL", "elbowStrikeR"] }
+      ],
+      "bunkai": { "known": true, "attack": "grabLapel", "attackerFrom": { "x": 0.4, "z": -0.1, "facing": 0 }, "text": "Slow deploying guard, then elbow smash to the temple." },
+      "transition": { "known": true, "source": "MIT Isshinryu Club Wansu description" } },
+    { "id": 20, "label": "Cat stance — front kick (reconstructed)", "coachCall": "Cat stance. Front kick.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0.4, "z": 0.7, "facing": 3.1416 },
+      "keyframes": [
+        { "t": 0, "stance": "catL", "arms": ["guardBoth"] },
+        { "t": 0.55, "stance": "catL", "arms": ["guardBoth"], "legs": ["frontKickL"] },
+        { "t": 1, "stance": "catL", "arms": ["guardBoth"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchR", "attackerFrom": { "x": 0.4, "z": -0.3, "facing": 0 }, "text": "Stop the advance with a straight kick from light cat stance." },
+      "transition": { "known": true, "source": "MIT Isshinryu Club Wansu description" } },
+    { "id": 21, "label": "Swap cat stance — front kick (reconstructed)", "coachCall": "Swap. Front kick.", "beats": 3, "kiai": false,
+      "embusen": { "x": 0.4, "z": 0.5, "facing": 3.1416 },
+      "keyframes": [
+        { "t": 0, "stance": "catR", "arms": ["guardBoth"] },
+        { "t": 0.55, "stance": "catR", "arms": ["guardBoth"], "legs": ["frontKickR"] },
+        { "t": 1, "stance": "catR", "arms": ["guardBoth"] }
+      ],
+      "bunkai": { "known": true, "attack": "steppingPunchL", "attackerFrom": { "x": 0.4, "z": -0.5, "facing": 0 }, "text": "Second stopping kick from the other side." },
+      "transition": { "known": true, "source": "MIT Isshinryu Club Wansu description" } },
+    { "id": 22, "label": "Double shuto to the throat — KIAI (reconstructed)", "coachCall": "Double shuto. Kiai!", "beats": 3, "kiai": true,
+      "embusen": { "x": 0.4, "z": 0.3, "facing": 3.1416 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiR", "arms": ["guardBoth"] },
+        { "t": 0.55, "stance": "seisanDachiR", "arms": ["doubleShutoThroat"] },
+        { "t": 1, "stance": "seisanDachiR", "arms": ["doubleShutoThroat"] }
+      ],
+      "bunkai": { "known": true, "attack": "chokeFront", "attackerFrom": { "x": 0.4, "z": -0.7, "facing": 0 }, "text": "Double shuto to both sides of the throat — the closing kiai strike." },
+      "transition": { "known": true, "source": "MIT Isshinryu Club: 'double shuto to throat to either side & kiai'" } },
+    { "id": 23, "label": "Slow guard — return and bow (reconstructed)", "coachCall": "Guard... return. Bow.", "beats": 4, "kiai": false,
+      "embusen": { "x": 0, "z": 0, "facing": 0 },
+      "keyframes": [
+        { "t": 0, "stance": "seisanDachiL", "arms": ["openHandBlockL", "openHandBlockR"] },
+        { "t": 0.5, "stance": "feetTogether", "arms": ["armsDown"] },
+        { "t": 1, "stance": "bow" }
+      ],
+      "bunkai": { "known": false },
+      "transition": { "known": true, "source": "MIT Isshinryu Club Wansu description" } }
+  ]
+}
