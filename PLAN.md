@@ -3,11 +3,19 @@ _Locked via claudex-loop — by Claude + Saint Wiggy, 2026-09-03. Codex (gpt-5.6
 APPROVED in round 4/5 after 36 findings (log in scratchpad `PLAN-REVIEW-LOG.md`, to be committed as
 `PLAN-REVIEW-LOG.md` with this file as `PLAN.md` on sign-off)._
 
-## On approval, first actions
-1. Copy this file to `PLAN.md` and the scratchpad log to `PLAN-REVIEW-LOG.md` in the repo root (branch `graphics`).
-2. Build Stage A (steps 1–9) with TDD; show the user `dev/hands.html` + the `hands` preset before starting Stage B.
-3. Stage B (steps 10–17); smoke-test Blender headless (`blender -b -noaudio --python-expr "import bpy;print(bpy.app.version)"`) first.
-4. Post-build cross-inspection by a fresh read-only Codex session after each stage (`inspect=on`).
+## Status (2026-09-03)
+- **Stage A (steps 1–9): DONE** — commits `0f8eece`, `2470766`, `06a17b7` on `graphics`; Codex cross-inspected
+  (see PLAN-REVIEW-LOG.md "Post-build inspection — Stage A"). User confirmed the default vertical fist
+  (`wrist.y = 0`, harness cells 1.1 / 2.1) is the correct Isshin Ryu standard.
+- **Stage B (steps 10–17): NEXT.** Already in place: `quat.js` `poseToBoneLocal` / `twistAboutY` /
+  `quatFromAxisAngle` / `conjQuat` with `tests/glb-pose.test.mjs` (rest-relative posing proven against
+  three's `Bone` hierarchy); Blender 4.5.3 headless verified (`"C:\Program Files\Blender Foundation\Blender 4.5lender.exe" -b -noaudio -P`, glTF add-on present).
+  Remaining: `tools/dump-rig.mjs`, `tools/build-avatar.py`, `tools/build-avatar.ps1`, vendor GLTFLoader (+BufferGeometryUtils)
+  from three r169 `examples/jsm`, GLB driver in `avatar.js` (validate → cache rest orientations on the isolated root →
+  attach → `frustumCulled=false` → per-side morph targets → recolour `gi/belt/skin` → `onReady`), `tests/glb.test.mjs`,
+  Chrome smoke (`?avatar=missing.glb` fallback), then a fresh read-only Codex inspection.
+- Test command: `node --import ./tests/three-resolver.mjs --test tests/*.test.mjs` (resolve hook for the bare `three` specifier).
+- Codex at xhigh can exceed 10 min on a big diff: run `codex exec` in the background and poll its `-o` file.
 
 ## Context
 
