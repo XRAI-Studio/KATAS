@@ -1,0 +1,57 @@
+# Publishes the kata viewer to GitHub Pages on every push to master.
+#
+# The site is the contents of kata-viewer/ served at the domain root, which is
+# why `path:` points at that folder rather than the repo root — docs/, tools/
+# and tests/ are not part of the site. There is no build step and no
+# dependency install: the viewer is plain ES modules and three.js is vendored
+# in kata-viewer/lib/, so the tests import it directly.
+name: Deploy kata viewer
+
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+
+# Least privilege: read the repo, and mint the OIDC token deploy-pages needs.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# One deploy at a time. Queued runs are dropped rather than racing, so the
+# newest push wins.
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Validate kata data and run tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      # Exits non-zero on an unknown pose, a bad keyframe or a kata that no
+      # longer builds a timeline — a broken kata JSON never reaches the site.
+      - name: Validate kata data
+        run: node tools/validate-data.mjs
+      - name: Unit tests
+        run: node --test tests/*.test.mjs
+
+  deploy:
+    name: Publish to Pages
+    needs: test
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: kata-viewer
+      - id: deployment
+        uses: actions/deploy-pages@v4
