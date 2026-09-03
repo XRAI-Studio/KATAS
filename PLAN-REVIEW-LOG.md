@@ -159,3 +159,30 @@ Fresh baseline verification: 65/65 tests pass, kata validation passes, and the w
 VERDICT: APPROVED
 ## Resolution
 Converged: VERDICT: APPROVED in round 4 of 5. 36 findings raised over three REVISE rounds; 35 accepted in full, 1 accepted in part (browser smoke test done manually via Claude-in-Chrome rather than adding a test-runner dependency). PLAN.md and this log are copied into the repo on user sign-off.
+
+## Post-build inspection — Stage A (fresh read-only Codex session, round 1 of 2)
+
+1. **High — Kata keyframe `adjust` values are silently discarded.** [`buildTimeline()`](/C:/Users/thetr/SOURCE/repos/katas/kata-viewer/js/player.js:191) forwards `overrides` but not `kf.adjust`, so the documented fist-orientation field only works through `buildClip()` and never in actual kata JSON.  
+   **Fix:** Pass `adjust: kf.adjust` to `resolveEntry()` and add a `buildTimeline()` regression test that preserves `shote`’s `wrist.x`.
+
+2. **Medium — Follow-camera rebasing can permanently lose the performer after discontinuities.** [`rebaseFollow()`](/C:/Users/thetr/SOURCE/repos/katas/kata-viewer/js/scene.js:267) merely records the new chest position without moving the target or camera, while tweens/drags invalidate the previous baseline. After a seek, kata switch, or `?cam=hands&follow=1&t=<later>`, subsequent following preserves the stale camera-to-performer displacement instead of reacquiring the chest.  
+   **Fix:** Rebase by translating both camera and target onto the post-pose chest anchor before storing it, with a separate initialization path if jump suppression is desired.
+
+3. **Medium — The `palm`/shote mesh does not put the palm heel forward.** The palm slab in [`openHandBase()`](/C:/Users/thetr/SOURCE/repos/katas/kata-viewer/js/avatar.js:71) keeps its broad-face normal along mirrored ±X; [`HAND_BUILDERS.palm`](/C:/Users/thetr/SOURCE/repos/katas/kata-viewer/js/avatar.js:84) rotates only the fingers. Because shote’s `wrist.x` leaves that X normal unchanged, the palm remains side-facing rather than facing the strike direction.  
+   **Fix:** Give the palm shape a mirrored wrist-space cock-back orientation that turns its palm normal toward local −Y, then verify both sides visually.
+
+4. **Low — The required seek/rebase paths have no regression coverage.** Navigation tests in [`player.test.mjs`](/C:/Users/thetr/SOURCE/repos/katas/tests/player.test.mjs:276) never assert `onSeek`, and no test exercises follow enable, scrub, kata load, replay-from-end, drag end, preset completion, or URL restoration.  
+   **Fix:** Add callback tests for all `Player` seek routes and a focused follow-state test covering URL, scrub, preset, and drag rebases.
+
+5. **Low — The hand acceptance harness does not use the actual `hands` camera preset.** [`hands.html`](/C:/Users/thetr/SOURCE/repos/katas/kata-viewer/dev/hands.html:78) constructs bespoke per-cell cameras, so it can pass while [`CAMERA_PRESETS.hands`](/C:/Users/thetr/SOURCE/repos/katas/kata-viewer/js/scene.js:13) is incorrectly framed.  
+   **Fix:** Share/export the preset framing configuration and have the harness derive its cameras from it.
+
+6. **Low — `RIG.JOINTS` consumption and avatar orientation remain untested.** [`hands.test.mjs`](/C:/Users/thetr/SOURCE/repos/katas/tests/hands.test.mjs:108) verifies schema literals and foot FK, but nothing instantiates `createKarateka()` to check the 17-group hierarchy, parent offsets, +Z face/toe direction, mirrored hand frames, or rendered sole placement.  
+   **Fix:** Add a browser smoke or testable avatar-structure helper asserting joint hierarchy, offsets, facing conventions, hand normals, and foot bounds.
+### Claude's dispositions
+1. **Accepted (High).** `buildTimeline` now forwards `kf.adjust`; test `adjust is honoured from kata JSON through buildTimeline`.
+2. **Accepted.** `rebaseFollow` now snaps the orbit target onto the chest and moves the camera by the same delta when following, so a seek/kata switch re-acquires the performer instead of preserving a stale offset.
+3. **Accepted (mesh-side).** `palm` shape is a quarter turn about the forearm + quarter bend about x, so the palm heel faces the strike with fingers up; verified in dev/hands.html cell 2.4.
+4. **Accepted in part.** Added `onSeek` coverage for seek/seekStep/next/prev/replay-from-end. Follow-state (drag end, preset completion, URL restore) needs OrbitControls + DOM — not unit-tested; verified live in Chrome (rebase on load with `?cam=hands&follow=1&t=2.5`, next-step, no console errors).
+5. **Rejected.** The harness deliberately puts one camera on each striking hand — its job is to prove hand geometry and wrist.y sign, not framing. The `hands` preset was checked live in the viewer (Seisan step 3 close-up screenshot).
+6. **Accepted.** New `tests/avatar.test.mjs` instantiates `createKarateka` under Node (via `tests/three-resolver.mjs`, a resolve hook mapping the bare `three` specifier to the vendored module): 17 groups with schema parents/offsets, sole on the floor, nose +Z, left wrist +X, hand shape cross-scaling, chest world position. Test command is now `node --import ./tests/three-resolver.mjs --test tests/*.test.mjs` (deploy.yml updated).

@@ -253,9 +253,11 @@ export function initScene(canvas) {
 
   // Follow-cam: keep the orbit target on the performer. Each tick the camera
   // and target move by the performer's displacement since the last tracked
-  // position, so the user's orbit offset is preserved. `rebaseFollow` resets
-  // the tracked position without moving the camera — the app calls it after
-  // every discontinuity (seek, kata load, preset tween, drag end, model swap).
+  // position, so the user's orbit offset is preserved. `rebaseFollow`
+  // re-acquires the performer after a discontinuity (seek, kata load, preset
+  // tween, drag end, model swap): the target snaps onto the chest and the
+  // camera moves with it, so a seek never leaves the camera aimed at where
+  // the performer used to be.
   let following = false;
   let suspended = false;                  // while the user drags
   const tracked = new THREE.Vector3();
@@ -264,7 +266,15 @@ export function initScene(canvas) {
   controls.addEventListener('start', () => { suspended = true; });
   controls.addEventListener('end', () => { suspended = false; trackedValid = false; });
   function setFollow(on) { following = !!on; trackedValid = false; }
-  function rebaseFollow(pos) { tracked.copy(pos); trackedValid = true; }
+  function rebaseFollow(pos) {
+    if (following) {
+      delta.subVectors(pos, controls.target);
+      controls.target.copy(pos);
+      camera.position.add(delta);
+    }
+    tracked.copy(pos);
+    trackedValid = true;
+  }
   function follow(pos) {
     if (!following || suspended || tween) { trackedValid = false; return; }
     if (!trackedValid) { rebaseFollow(pos); return; }

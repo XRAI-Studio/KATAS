@@ -38,7 +38,7 @@ jobs:
       - name: Validate kata data
         run: node tools/validate-data.mjs
       - name: Unit tests
-        run: node --test tests/*.test.mjs
+        run: node --import ./tests/three-resolver.mjs --test tests/*.test.mjs
 
   deploy:
     name: Publish to Pages

@@ -192,6 +192,7 @@ export function buildTimeline(kata, poseLib) {
         time,
         parts: [kf.stance, ...(kf.arms || []), ...(kf.legs || [])].filter(Boolean),
         overrides: kf.overrides,
+        adjust: kf.adjust,
         root: kf.root,
         ease: kf.ease,
         hold: kf.hold !== undefined ? kf.hold * SECONDS_PER_BEAT : undefined,

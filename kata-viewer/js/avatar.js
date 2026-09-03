@@ -81,11 +81,29 @@ function openHandBase(mat, sx, opts, thumbOut) {
   return g;
 }
 
+// Shote presents the palm heel to the target: the hand is turned a quarter
+// turn about the forearm so the palm faces along the strike, then the fingers
+// are drawn back. Mesh-side (the shape owns its presentation); the pose's
+// wrist flexion still cocks the hand.
+function palmShape(mat, sx) {
+  // Hand frame: fingers -y (along the strike), palm normal medial (-sx·x).
+  // 1) quarter turn about the forearm: palm normal -> -z;  2) quarter bend
+  // about x: palm normal -> -y (facing the target), fingers -> +z (up when
+  // the arm is out). The pose's own wrist.x then cocks it into a rising heel.
+  const g = new THREE.Group();
+  g.rotation.x = -Math.PI / 2;
+  const hand = openHandBase(mat, sx, { gap: 0.003 }, false);
+  hand.rotation.y = -sx * Math.PI / 2;
+  hand.children[1].rotation.x = -0.35;      // fingers eased slightly further back
+  g.add(hand);
+  return g;
+}
+
 const HAND_BUILDERS = {
   fist: fistShape,
   open: (mat, sx) => openHandBase(mat, sx, { gap: 0.004 }, true),     // knife hand: fingers slightly apart, thumb out
   spear: (mat, sx) => openHandBase(mat, sx, { gap: 0 }, false),        // nukite: fingers together, thumb tucked
-  palm: (mat, sx) => openHandBase(mat, sx, { gap: 0.003, tiltZ: 1.15 }, false),   // shote: fingers drawn back
+  palm: palmShape,                                                      // shote: palm heel forward, fingers drawn back
 };
 
 // ---------------------------------------------------------------------------

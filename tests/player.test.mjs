@@ -210,6 +210,24 @@ test('hand shape blends across a segment into an open-hand technique', () => {
   assert.ok(midR.open > 0 && midR.open < 1 && near(midR.fist + midR.open, 1), `mid hand blend ${JSON.stringify(midR)}`);
 });
 
+test('every time jump fires onSeek with the clamped time: seek, seekStep, next/prev, replay from the end', () => {
+  const tl = buildTimeline(kata, POSES);
+  const seen = [];
+  const p = new Player(tl, { onSeek: (t) => seen.push(t) });
+  const last = tl.steps.length - 1;
+  p.seek(-5);            assert.equal(seen.at(-1), 0);
+  p.seek(1e9);           assert.equal(seen.at(-1), tl.duration);
+  p.seekStep(0);         assert.equal(seen.at(-1), 0);
+  p.nextStep();          assert.equal(seen.at(-1), tl.steps[1].start);
+  p.prevStep();          assert.equal(seen.at(-1), tl.steps[0].start);
+  p.seekStep(last);      assert.equal(seen.at(-1), tl.steps[last].start);
+  const n = seen.length;
+  p.seek(tl.duration); p.play();                       // replay from the end goes through seek(0)
+  assert.equal(seen.at(-1), 0); assert.equal(seen.length, n + 2);
+  p.pause(); p.tick(0.1);                              // plain playback is not a seek
+  assert.equal(seen.length, n + 2);
+});
+
 test('sampling is pure — same t gives identical pose', () => {
   const tl = buildTimeline(kata, POSES);
   const t = 1.234;

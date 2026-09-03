@@ -80,6 +80,16 @@ test('adjust merges per axis and keeps the authored wrist flexion of shote', () 
   assert.throws(() => buildClip([{ time: 0, parts: ['ready'], adjust: { nope: { y: 1 } } }, { time: 1, parts: ['ready'] }], POSES), /nope/);
 });
 
+test('adjust is honoured from kata JSON through buildTimeline (not only buildClip)', () => {
+  const kata = { name: 'X', steps: [{
+    id: 0, label: 'a', coachCall: 'a', beats: 2, embusen: { x: 0, z: 0, facing: 0 }, transition: { known: true },
+    keyframes: [{ t: 0, stance: 'seisanDachiL', arms: ['shoteR'], adjust: { wristR: { y: 1.2 } } }, { t: 1, stance: 'seisanDachiL', arms: ['shoteR'] }],
+  }] };
+  const e = quatToEulerXYZ(samplePose(buildTimeline(kata, POSES), 0).joints.wristR);
+  assert.ok(near(e.x, composePose(POSES.shoteR).joints.wristR.x, 1e-9), 'wrist.x kept');
+  assert.ok(near(e.y, 1.2, 1e-9), `wrist.y ${e.y}`);
+});
+
 test('overrides still replace the whole joint (unchanged semantics)', () => {
   const clip = buildClip([
     { time: 0, parts: ['shoteR'], overrides: { wristR: { y: 0.3 } } },
