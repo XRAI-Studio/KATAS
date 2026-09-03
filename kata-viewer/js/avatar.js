@@ -1,9 +1,15 @@
 import * as THREE from 'three';
+import { GLTFLoader } from '../lib/three/GLTFLoader.js';
 import { RIG } from './rig.js';
-import { HAND_SHAPES } from './poses.js';
+import { HAND_SHAPES, JOINT_NAMES } from './poses.js';
+import { rigSchemaHash } from './rig-schema.js';
+import { eulerXYZToQuat, poseToBoneLocal, twistAboutY, quatFromAxisAngle, IDENTITY_QUAT } from './quat.js';
 
-// Procedural karateka. Joint pivots are Groups built from RIG.JOINTS (one per
-// rig joint, same names, same rest offsets); meshes hang off them.
+// Karateka avatar. A procedural mannequin is built synchronously from
+// RIG.JOINTS (one Group per rig joint, same names, same rest offsets) and shown
+// at once; the skinned GLB (assets/karateka.glb, built by tools/build-avatar.ps1
+// to the same rig) is loaded asynchronously, validated, and swapped in — the
+// mannequin stays as the fallback if the GLB is missing or malformed.
 // Outer `group` carries embusen placement (set by the app);
 // inner `body` carries pose root offsets (set by setPose).
 //
@@ -107,7 +113,9 @@ const HAND_BUILDERS = {
 };
 
 // ---------------------------------------------------------------------------
-export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179 } = {}) {
+const DEFAULT_GLB = new URL('../assets/karateka.glb', import.meta.url).href;
+
+export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179, glb = DEFAULT_GLB } = {}) {
   const options = { gi, belt, skin };
   const giMat = new THREE.MeshStandardMaterial({ color: gi, roughness: 0.9 });
   const beltMat = new THREE.MeshStandardMaterial({ color: belt, roughness: 0.8 });
@@ -118,6 +126,9 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
   const body = new THREE.Group();        // pose root transform
   body.position.y = HIPS_Y;
   group.add(body);
+  const proc = new THREE.Group();        // procedural mannequin root (hidden once the GLB is active)
+  proc.name = 'procedural';
+  body.add(proc);
 
   // Joint pivots straight from the rig schema.
   const joints = {};
@@ -125,7 +136,7 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
     const g = new THREE.Group();
     g.name = name;
     g.position.set(offset.x, offset.y, offset.z);
-    (parent ? joints[parent] : body).add(g);
+    (parent ? joints[parent] : proc).add(g);
     joints[name] = g;
   }
 
@@ -207,10 +218,18 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
       const w = Math.min(1, Math.max(0, weights[shape] ?? 0));
       hands[side][shape].scale.setScalar(Math.max(MIN_SCALE, w));
     }
+    if (skinned) applyHandSkinned(side, weights);
   }
+
+  // ---------------------------------------------------------------------------
+  // Skinned GLB (Stage B). `skinned` is null until a GLB has been validated.
+  // ---------------------------------------------------------------------------
+  let skinned = null;   // { bones, rest, hands: {L: mesh, R: mesh}, root }
+  let lastPose = null;  // re-applied when the GLB arrives (a static avatar is posed once)
 
   function setPose(pose) {
     if (!pose) return;
+    lastPose = pose;
     if (pose.joints) {
       for (const [name, rot] of Object.entries(pose.joints)) {
         const g = joints[name];
@@ -218,6 +237,7 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
         if (rot.w !== undefined) g.quaternion.set(rot.x, rot.y, rot.z, rot.w);   // sampled (quaternion)
         else g.rotation.set(rot.x || 0, rot.y || 0, rot.z || 0);               // authored (Euler XYZ)
       }
+      if (skinned) poseSkinned(pose.joints);
     }
     if (pose.root) {
       body.position.set(pose.root.x || 0, HIPS_Y + (pose.root.y || 0), pose.root.z || 0);
@@ -226,8 +246,112 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
     if (pose.hands) for (const side of ['L', 'R']) if (pose.hands[side]) applyHand(side, pose.hands[side]);
   }
 
-  // Stage B hook: fires once when a skinned character has replaced the
-  // procedural one (never for the procedural avatar alone).
+  // Rig joint rotations are expressed in world-aligned rest frames; GLB bones
+  // are not. local = Aparent⁻¹ · q · A (quat.js poseToBoneLocal, PLAN.md step 13).
+  const RIG_Y = { x: 0, y: 1, z: 0 };
+  function poseSkinned(rots) {
+    const { bones, rest } = skinned;
+    const q = {};
+    for (const name of JOINT_NAMES) {
+      const r = rots[name];
+      q[name] = !r ? IDENTITY_QUAT : r.w !== undefined ? r : eulerXYZToQuat(r);
+      const parent = RIG.JOINTS[name].parent;
+      const l = poseToBoneLocal(q[name], parent ? rest[parent] : IDENTITY_QUAT, rest[name]);
+      bones[name].quaternion.set(l.x, l.y, l.z, l.w);
+    }
+    // Deform-only forearm helper: half the wrist's roll about the forearm axis,
+    // in the elbow's frame — not an ancestor of the wrist, so nothing compounds.
+    for (const side of ['L', 'R']) {
+      const h = bones['forearmTwist' + side];
+      if (!h) continue;
+      const qh = quatFromAxisAngle(RIG_Y, 0.5 * twistAboutY(q['wrist' + side]));
+      const l = poseToBoneLocal(qh, rest['elbow' + side], rest['forearmTwist' + side]);
+      h.quaternion.set(l.x, l.y, l.z, l.w);
+    }
+  }
+
+  function applyHandSkinned(side, weights) {
+    const mesh = skinned.hands[side];
+    for (const shape of HAND_SHAPES) {
+      if (shape === 'fist') continue;                        // basis
+      const i = mesh.morphTargetDictionary[shape];
+      mesh.morphTargetInfluences[i] = Math.min(1, Math.max(0, weights[shape] ?? 0));
+    }
+  }
+
+  // Validate a loaded GLB against the rig; return a reason string or null.
+  function validateGlb(scene) {
+    const byName = {};
+    scene.traverse((o) => { byName[o.name] = (byName[o.name] || []).concat(o); });
+    for (const n of JOINT_NAMES) {
+      if (!byName[n] || byName[n].length !== 1) return `bone "${n}" found ${byName[n]?.length ?? 0} times`;
+      const parent = RIG.JOINTS[n].parent;
+      if (parent && byName[n][0].parent?.name !== parent) return `bone "${n}" parent is "${byName[n][0].parent?.name}", expected "${parent}"`;
+    }
+    for (const h of ['forearmTwistL', 'forearmTwistR']) if (!byName[h]) return `missing helper bone "${h}"`;
+    let skinnedMeshes = 0;
+    scene.traverse((o) => { if (o.isSkinnedMesh) skinnedMeshes++; });
+    if (!skinnedMeshes) return 'no SkinnedMesh';
+    for (const side of ['L', 'R']) {
+      const m = byName['hand' + side]?.[0];
+      if (!m || !m.isSkinnedMesh) return `hand${side} is not a SkinnedMesh`;
+      for (const shape of HAND_SHAPES) {
+        if (shape !== 'fist' && m.morphTargetDictionary?.[shape] === undefined) return `hand${side} lacks morph target "${shape}"`;
+      }
+    }
+    const mats = new Set();
+    scene.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) mats.add(m.name); });
+    for (const m of ['gi', 'belt', 'skin']) if (!mats.has(m)) return `missing material "${m}"`;
+    const arm = byName.karateka?.[0];
+    const want = rigSchemaHash();
+    if (arm?.userData?.rigSchemaHash !== want) return `rig schema hash ${arm?.userData?.rigSchemaHash} does not match live ${want} - rebuild with tools/build-avatar.ps1`;
+    return null;
+  }
+
+  function adoptGlb(gltf) {
+    const root = gltf.scene;
+    const why = validateGlb(root);
+    if (why) { console.error(`karateka: glb rejected (${why}); keeping the procedural avatar`); return; }
+    // Rest orientations are cached on the isolated root (identity ancestors),
+    // BEFORE attaching under a possibly turned/moved body.
+    root.updateMatrixWorld(true);
+    const bones = {}, rest = {}, q = new THREE.Quaternion();
+    root.traverse((o) => {
+      if (!(JOINT_NAMES.includes(o.name) || /^(forearmTwist|toes)[LR]$/.test(o.name))) return;
+      bones[o.name] = o;
+      o.getWorldQuaternion(q);
+      rest[o.name] = { x: q.x, y: q.y, z: q.z, w: q.w };
+    });
+    const hands = {};
+    const colours = { gi: options.gi, belt: options.belt, skin: options.skin };
+    root.traverse((o) => {
+      if (!o.isMesh) return;
+      o.castShadow = true;
+      if (o.isSkinnedMesh) o.frustumCulled = false;         // bounds are computed once at rest; hands would be culled mid-punch
+      const mats = [].concat(o.material).map((m) => {       // per-instance clones, recoloured by name
+        const c = m.clone();
+        if (colours[c.name] !== undefined) c.color.set(colours[c.name]);
+        return c;
+      });
+      o.material = mats.length === 1 ? mats[0] : mats;
+      if (o.name === 'handL' || o.name === 'handR') hands[o.name.slice(-1)] = o;
+    });
+    skinned = { bones, rest, hands, root };
+    body.add(root);
+    proc.visible = false;
+    if (lastPose) setPose(lastPose);
+    console.info('karateka: glb active');
+    ready = true;
+    for (const cb of readyCbs.splice(0)) cb();
+  }
+
+  if (glb) {
+    new GLTFLoader().load(glb, adoptGlb, undefined,
+      (err) => console.error(`karateka: glb load failed (${err?.message || err}); keeping the procedural avatar`));
+  }
+
+  // Fires once the skinned character has replaced the procedural one (never
+  // for the procedural avatar alone).
   const readyCbs = [];
   let ready = false;
   function onReady(cb) { if (ready) cb(); else readyCbs.push(cb); }
@@ -238,8 +362,11 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
     options,
     setPose,
     onReady,
-    getJoint: (name) => joints[name] || null,
-    // World position of the chest centre (camera follow target).
+    get skinned() { return !!skinned; },
+    getJoint: (name) => (skinned ? skinned.bones[name] : joints[name]) || null,
+    // World position of the chest centre (camera follow target). The hidden
+    // procedural chest group is driven with the same rotations, so it is a
+    // valid anchor whichever mesh is visible.
     getChestWorldPosition: (out = new THREE.Vector3()) => joints.chest.localToWorld(out.copy(chestOffset)),
   };
 }

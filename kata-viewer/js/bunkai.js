@@ -86,13 +86,18 @@ function sampleAttack(name, u) {
   return sampleClip(CLIPS[name] || CLIPS.none, u);
 }
 
-export function initBunkai(scene) {
-  const attacker = createKarateka({ gi: 0x3a3a45, belt: 0x7a1f1f, skin: 0xb28a63 });
+export function initBunkai(scene, { glb } = {}) {
+  const attacker = createKarateka({ gi: 0x3a3a45, belt: 0x7a1f1f, skin: 0xb28a63, ...(glb !== undefined ? { glb } : {}) });
   attacker.group.visible = false;
-  // enable opacity fades
-  attacker.group.traverse((o) => {
-    if (o.isMesh) { o.material = o.material.clone(); o.material.transparent = true; }
+  // enable opacity fades — on the procedural meshes now, and again on the
+  // skinned meshes once the GLB has been swapped in (they arrive later)
+  const prepMaterials = () => attacker.group.traverse((o) => {
+    if (!o.isMesh) return;
+    o.material = [].concat(o.material).map((m) => { const c = m.clone(); c.transparent = true; return c; });
+    if (o.material.length === 1) o.material = o.material[0];
   });
+  prepMaterials();
+  attacker.onReady(prepMaterials);
   scene.add(attacker.group);
 
   const card = document.getElementById('bunkai-card');
@@ -100,7 +105,7 @@ export function initBunkai(scene) {
   let lastCardStep = null;
 
   function setOpacity(v) {
-    attacker.group.traverse((o) => { if (o.isMesh) o.material.opacity = v; });
+    attacker.group.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) m.opacity = v; });
   }
 
   function update(step, u) {

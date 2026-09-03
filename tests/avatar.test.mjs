@@ -11,7 +11,7 @@ import { createKarateka } from '../kata-viewer/js/avatar.js';
 const near = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
 
 test('createKarateka builds one Group per rig joint with the schema parent and offset', () => {
-  const k = createKarateka();
+  const k = createKarateka({ glb: false });
   for (const name of JOINT_NAMES) {
     const g = k.getJoint(name);
     assert.ok(g, name);
@@ -23,7 +23,7 @@ test('createKarateka builds one Group per rig joint with the schema parent and o
 });
 
 test('standing: feet rest on the floor and the face (nose) points +Z, left hand at +X', () => {
-  const k = createKarateka();
+  const k = createKarateka({ glb: false });
   k.setPose({ joints: {}, root: { x: 0, y: -RIG.HIPS_Y - (RIG.HIP.y - RIG.THIGH - RIG.SHIN - RIG.SOLE_BELOW_ANKLE) + 0, ry: 0 } });
   // root.y chosen so the rig FK sole sits exactly at y = 0 (same arithmetic as footSoleY)
   k.group.updateMatrixWorld(true);
@@ -43,7 +43,7 @@ test('standing: feet rest on the floor and the face (nose) points +Z, left hand 
 });
 
 test('hand shapes are cross-scaled from the sampler weights, one shape group per HAND_SHAPES entry', () => {
-  const k = createKarateka();
+  const k = createKarateka({ glb: false });
   const clip = buildClip([{ time: 0, parts: ['nukiteR'] }, { time: 1, parts: ['shutoLowR'] }], POSES, { hold: 0 });
   k.setPose(sampleClip(clip, 0.5));
   const wrist = k.getJoint('wristR');
@@ -55,7 +55,7 @@ test('hand shapes are cross-scaled from the sampler weights, one shape group per
 });
 
 test('getChestWorldPosition follows embusen placement', () => {
-  const k = createKarateka();
+  const k = createKarateka({ glb: false });
   k.group.position.set(2, 0, -1);
   k.group.updateMatrixWorld(true);
   const p = k.getChestWorldPosition();

@@ -27,7 +27,12 @@ try {
 }
 const { scene, camera, renderer, setCameraPreset, tick: sceneTick } = ctx;
 
-const karateka = createKarateka();
+// Dev override for the skinned model: ?avatar=missing.glb exercises the
+// procedural fallback; ?avatar=off skips the GLB entirely.
+const avatarParam = new URLSearchParams(location.search).get('avatar');
+const glbOption = avatarParam === 'off' ? { glb: false }
+  : avatarParam ? { glb: new URL('assets/' + avatarParam, location.href).href } : {};
+const karateka = createKarateka(glbOption);
 scene.add(karateka.group);
 
 // Follow-cam bookkeeping: any discontinuity (seek, kata load, preset tween,
@@ -41,7 +46,7 @@ karateka.onReady(requestRebase);
 const chestPos = new THREE.Vector3();
 
 const coach = createCoach();
-const bunkai = initBunkai(scene);
+const bunkai = initBunkai(scene, glbOption);
 
 let timeline = null;
 let player = null;

@@ -59,3 +59,16 @@ The viewer accepts URL parameters, which work on the deployed site too:
 - `cam` — front | side | rear | overhead
 - `bunkai=1` — bunkai attacker on
 - `play=1` — start playing immediately
+
+## Skinned avatar (assets/karateka.glb)
+
+The character mesh is generated, not hand-modelled. Any change to `js/rig.js` (joint offsets, hand or
+foot dimensions) or to `tools/build-avatar.py` requires a rebuild, from the repo root:
+
+    .\tools\build-avatar.ps1
+
+It dumps the rig schema (`tools/dump-rig.mjs` -> `tools/rig.json`), runs Blender 4.5 headless
+(`tools/build-avatar.py`), and verifies the GLB with `tests/glb.test.mjs`. The GLB embeds a hash of
+the rig schema; the viewer refuses a stale GLB (console: `karateka: glb rejected (rig schema hash …)`)
+and falls back to the procedural mannequin, so a forgotten rebuild is visible, never silent.
+`?avatar=missing.glb` forces the fallback for testing; `?avatar=off` skips the GLB.
