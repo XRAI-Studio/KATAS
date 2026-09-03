@@ -9,7 +9,7 @@ APPROVED in round 4/5 after 36 findings (log in scratchpad `PLAN-REVIEW-LOG.md`,
   (`wrist.y = 0`, harness cells 1.1 / 2.1) is the correct Isshin Ryu standard.
 - **Stage B (steps 10–17): NEXT.** Already in place: `quat.js` `poseToBoneLocal` / `twistAboutY` /
   `quatFromAxisAngle` / `conjQuat` with `tests/glb-pose.test.mjs` (rest-relative posing proven against
-  three's `Bone` hierarchy); Blender 4.5.3 headless verified (`"C:\Program Files\Blender Foundation\Blender 4.5blender.exe" -b -noaudio -P`, glTF add-on present).
+  three's `Bone` hierarchy); Blender 4.5.3 headless verified (`"C:\Program Files\Blender Foundation\Blender 4.5\blender.exe" -b -noaudio -P`, glTF add-on present).
   Remaining: `tools/dump-rig.mjs`, `tools/build-avatar.py`, `tools/build-avatar.ps1`, vendor GLTFLoader (+BufferGeometryUtils)
   from three r169 `examples/jsm`, GLB driver in `avatar.js` (validate → cache rest orientations on the isolated root →
   attach → `frustumCulled=false` → per-side morph targets → recolour `gi/belt/skin` → `onReady`), `tests/glb.test.mjs`,
