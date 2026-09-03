@@ -186,3 +186,51 @@ Converged: VERDICT: APPROVED in round 4 of 5. 36 findings raised over three REVI
 4. **Accepted in part.** Added `onSeek` coverage for seek/seekStep/next/prev/replay-from-end. Follow-state (drag end, preset completion, URL restore) needs OrbitControls + DOM — not unit-tested; verified live in Chrome (rebase on load with `?cam=hands&follow=1&t=2.5`, next-step, no console errors).
 5. **Rejected.** The harness deliberately puts one camera on each striking hand — its job is to prove hand geometry and wrist.y sign, not framing. The `hands` preset was checked live in the viewer (Seisan step 3 close-up screenshot).
 6. **Accepted.** New `tests/avatar.test.mjs` instantiates `createKarateka` under Node (via `tests/three-resolver.mjs`, a resolve hook mapping the bare `three` specifier to the vendored module): 17 groups with schema parents/offsets, sole on the floor, nose +Z, left wrist +X, hand shape cross-scaling, chest world position. Test command is now `node --import ./tests/three-resolver.mjs --test tests/*.test.mjs` (deploy.yml updated).
+
+## Post-build inspection — Stage B (fresh read-only Codex session, high effort, round 1 of 2)
+
+Chrome smoke (recorded before inspection): `?kata=seisan&cam=hands&t=6&follow=1` → console `karateka: glb active` ×2 (performer + bunkai attacker), pose identical to the procedural mannequin (rest-relative posing verified live); `&bunkai=1` attacker skinned and recoloured; `?avatar=missing.glb` → `karateka: glb load failed (… 404 …); keeping the procedural avatar`, mannequin visible; `dev/hands.html` with GLB: cells 1.1–1.6 and 2.1–2.6 match Stage A semantics via morph targets (screenshots docs/images/stage-b-glb-hands.jpg, stage-b-naihanchi.jpg). Found and fixed before inspection: harness posed once before the GLB arrived → adoptGlb now re-applies the last pose; hair hemisphere generated from the wrong half.
+
+1. **Medium — GLB validation can accept a disconnected or incorrectly parented skeleton.** [`validateGlb()`](/C:/Users/thetr/SOURCE/repos/katas/kata-viewer/js/avatar.js:283) checks names but not `isBone`, helper uniqueness/parents, or that both hands’ `skeleton.bones` are the validated joints; such an asset is swapped in and then will not pose correctly.  
+   Fix: Validate bone types, all helper parents, one shared expected skeleton, and morph influence arrays before adoption.
+
+2. **Medium — Adoption is not transactional, weakening the promised fallback.** [`adoptGlb()`](/C:/Users/thetr/SOURCE/repos/katas/kata-viewer/js/avatar.js:339) assigns `skinned`, attaches the root, and hides the procedural model before pose reapplication and readiness callbacks complete; an exception can leave the fallback hidden.  
+   Fix: Stage adoption inside `try/catch` and only hide `proc` after setup and initial posing succeed, rolling back on failure.
+
+3. **Medium — Morph normals are deliberately omitted despite large hand rotations.** [`build-avatar.py`](/C:/Users/thetr/SOURCE/repos/katas/tools/build-avatar.py:337) sets `export_morph_normal=False`, while the palm target rotates components by roughly 90°; its lighting will retain fist-basis normals and shade incorrectly.  
+   Fix: Export morph normals and assert each hand target includes matching `NORMAL` data.
+
+4. **Medium — The GLB test does not validate shape-key topology sufficiently.** [`glb.test.mjs`](/C:/Users/thetr/SOURCE/repos/katas/tests/glb.test.mjs:127) checks only target names and count, while [`build-avatar.py`](/C:/Users/thetr/SOURCE/repos/katas/tools/build-avatar.py:313) verifies only vertex count; reordered or missing target positions could scramble a hand while tests pass.  
+   Fix: Assert every target has a `POSITION` accessor matching the basis count and preserve/assert a stable semantic vertex ordering in the generator.
+
+5. **Medium — Inverse-bind matrices are counted but never checked.** [`glb.test.mjs`](/C:/Users/thetr/SOURCE/repos/katas/tests/glb.test.mjs:140) accepts arbitrary matrices as long as there is one per joint, so a bad exporter configuration could produce an exploding skin that still passes CI.  
+   Fix: Multiply every joint’s rest-world matrix by its IBM and assert the expected identity mesh-space transform.
+
+6. **Medium — Forearm-twist coverage does not meet the bilateral ±π/2 plan.** [`glb-pose.test.mjs`](/C:/Users/thetr/SOURCE/repos/katas/tests/glb-pose.test.mjs:102) tests one positive angle using the left wrist as a stand-in, and [`glb.test.mjs`](/C:/Users/thetr/SOURCE/repos/katas/tests/glb.test.mjs:91) checks only the left helper’s parent.  
+   Fix: Parameterize both sides and both signs, and assert both exported helpers’ parents, rest frames, and quarter-turn world twists.
+
+7. **Low — The locked Stage B surface treatment was not implemented.** [PLAN.md](/C:/Users/thetr/SOURCE/repos/katas/PLAN.md:55) requires a baked gi seam/belt texture, but the generator creates flat materials and explicitly disables texture coordinates in [`build-avatar.py`](/C:/Users/thetr/SOURCE/repos/katas/tools/build-avatar.py:339).  
+   Fix: Add the promised UV/texture asset or explicitly amend the approved Stage B requirement.
+
+8. **Low — The required rig-dump parity/hash-stability test is missing.** [PLAN.md](/C:/Users/thetr/SOURCE/repos/katas/PLAN.md:186) calls for `rig.json` equality and a stable hash, but [`rig.test.mjs`](/C:/Users/thetr/SOURCE/repos/katas/tests/rig.test.mjs:68) tests only runtime rig constants/FK.  
+   Fix: Compare parsed `tools/rig.json` with `rigSchema()` and pin the expected `rigSchemaHash()`.
+
+9. **Medium — There is no recorded Stage B browser integration smoke.** The structural tests never execute the actual loader URL, validation/swap, per-side morph mapping, recolouring, or failed-load fallback, and [the review log](/C:/Users/thetr/SOURCE/repos/katas/PLAN-REVIEW-LOG.md:189) ends with Stage A.  
+   Fix: Record the required successful-load and `?avatar=missing.glb` Chrome runs, preferably adding a lightweight browser smoke to CI.
+
+10. **Medium — The manual deployment instructions omit the new asset directory.** [`DEPLOY.md`](/C:/Users/thetr/SOURCE/repos/katas/kata-viewer/DEPLOY.md:17) enumerates `index.html`, `css`, `js`, `data`, and `lib`, but not `assets/`; following that checklist leaves Stage B permanently on the procedural fallback.  
+    Fix: Add `assets/karateka.glb` to the upload checklist.
+
+The GitHub Pages workflow itself uploads `kata-viewer/` wholesale, and its relative module/asset URLs appear subpath-safe; I found no separate Pages-specific path blocker.
+### Claude's dispositions
+1. **Accepted.** `validateGlb` now requires `isBone` on all 17 joints and 4 helpers, checks both helpers' parents (`forearmTwist*`→`elbow*`, `toes*`→`ankle*`), that every SkinnedMesh's skeleton contains the 17 joints, and that hands have morph influence arrays.
+2. **Accepted.** Adoption is transactional: `adoptValidated` runs in try/catch; the mannequin is hidden only after the first pose succeeds; on throw the root is detached, `skinned` reset, mannequin restored, error logged.
+3. **Accepted.** `export_morph_normal=True`; GLB rebuilt; test asserts every target has POSITION + NORMAL.
+4. **Accepted.** Test asserts each target's POSITION/NORMAL count equals the basis count and that each target displaces vertices.
+5. **Accepted.** Test multiplies each joint's rest world matrix by its IBM and asserts identity (mesh transforms are identity).
+6. **Accepted.** `glb-pose.test.mjs` helper test parameterised over L/R × ±π/2; `glb.test.mjs` checks both helpers' parents.
+7. **Accepted as a plan amendment, not implemented.** PLAN.md C2 amended: Stage B ships flat named materials; baked gi/belt texture deferred to a follow-up (asset work inside `build-avatar.py`, no contract impact).
+8. **Accepted.** `rig.test.mjs`: `tools/rig.json` equals `rigSchema()`, carries its hash, and the hash is pinned (`34e8f9721d058927`).
+9. **Accepted (manual).** Chrome runs recorded above. Adding a browser runner to CI rejected again — repo is deliberately zero-dependency.
+10. **Accepted.** DEPLOY.md manual checklist lists `assets/`.
+Result: 102/102 tests, `tools/build-avatar.ps1` green, GLB re-verified in Chrome after the stricter validation.

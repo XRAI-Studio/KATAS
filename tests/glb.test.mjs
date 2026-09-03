@@ -88,9 +88,11 @@ test('every rig joint is a node exactly once, with the schema parent', () => {
     const parent = RIG.JOINTS[n].parent;
     if (parent) assert.equal(g.nodes[parentOf[ids[0]]].name, parent, `${n} parent`);
   }
-  for (const h of ['forearmTwistL', 'forearmTwistR', 'toesL', 'toesR']) assert.ok(nodeByName[h] !== undefined, h);
-  assert.equal(g.nodes[parentOf[nodeByName.forearmTwistL]].name, 'elbowL');
-  assert.equal(g.nodes[parentOf[nodeByName.toesR]].name, 'ankleR');
+  for (const side of ['L', 'R']) {
+    for (const h of ['forearmTwist', 'toes']) assert.ok(nodeByName[h + side] !== undefined, h + side);
+    assert.equal(g.nodes[parentOf[nodeByName['forearmTwist' + side]]].name, 'elbow' + side);
+    assert.equal(g.nodes[parentOf[nodeByName['toes' + side]]].name, 'ankle' + side);
+  }
 });
 
 test('joint rest positions reconstructed through the full TRS chain equal rig FK (proves the axis contract)', () => {
@@ -128,7 +130,17 @@ test('hand meshes carry morph targets open/spear/palm (fist is the basis)', () =
   for (const name of ['handL', 'handR']) {
     const mesh = g.meshes[g.nodes[nodeByName[name]].mesh];
     assert.deepEqual(mesh.extras.targetNames, HAND_SHAPES.filter(s => s !== 'fist'));
-    for (const prim of mesh.primitives) assert.equal(prim.targets.length, 3);
+    for (const prim of mesh.primitives) {
+      assert.equal(prim.targets.length, 3);
+      const n = g.accessors[prim.attributes.POSITION].count;
+      for (const t of prim.targets) {
+        assert.ok(t.POSITION !== undefined && t.NORMAL !== undefined, `${name} target has POSITION and NORMAL`);
+        assert.equal(g.accessors[t.POSITION].count, n, `${name} target vertex count`);
+        assert.equal(g.accessors[t.NORMAL].count, n);
+        // a morph target that moves nothing is a broken export
+        assert.ok(readAccessor(g, bin, t.POSITION).some(d => Math.hypot(...d) > 1e-4), `${name} target displaces vertices`);
+      }
+    }
   }
 });
 
@@ -141,6 +153,11 @@ test('skin is valid: IBMs per joint, JOINTS_0 indices in range, WEIGHTS_0 sum to
   const skin = g.skins[0];
   const ibm = readAccessor(g, bin, skin.inverseBindMatrices);
   assert.equal(ibm.length, skin.joints.length);
+  // Meshes have identity transforms, so restWorld(joint) * IBM must be the identity.
+  skin.joints.forEach((j, i) => {
+    const m = mul(worldMatrix(j), ibm[i]);
+    for (let k = 0; k < 16; k++) assert.ok(near(m[k], k % 5 === 0 ? 1 : 0, 1e-4), `IBM ${g.nodes[j].name}[${k}] = ${m[k]}`);
+  });
   let vertices = 0;
   for (const name of ['body', 'handL', 'handR']) {
     const mesh = g.meshes[g.nodes[nodeByName[name]].mesh];

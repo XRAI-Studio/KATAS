@@ -72,3 +72,19 @@ test('the rig exports the joint offsets avatar.js builds from', () => {
   assert.deepEqual(RIG.HIP, { x: 0.11, y: -0.05, z: 0 });
   assert.ok(RIG.SOLE_BELOW_ANKLE > 0);
 });
+
+// ---------------------------------------------------------------------------
+// tools/rig.json (what the Blender builder consumed) mirrors the live schema
+// ---------------------------------------------------------------------------
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { rigSchema, rigSchemaHash } from '../kata-viewer/js/rig-schema.js';
+
+test('tools/rig.json equals rigSchema() and carries its hash; the hash is pinned (rebuild the GLB when it changes)', () => {
+  const dumped = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), '..', 'tools', 'rig.json'), 'utf8'));
+  const { schemaHash, ...schema } = dumped;
+  assert.deepEqual(schema, JSON.parse(JSON.stringify(rigSchema())));
+  assert.equal(schemaHash, rigSchemaHash());
+  assert.equal(rigSchemaHash(), '34e8f9721d058927');
+});

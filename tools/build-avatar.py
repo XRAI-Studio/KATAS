@@ -334,7 +334,7 @@ def main():
     os.makedirs(os.path.dirname(OUT), exist_ok=True)
     bpy.ops.export_scene.gltf(
         filepath=OUT, export_format='GLB', export_yup=True,
-        export_skins=True, export_morph=True, export_morph_normal=False, export_morph_tangent=False,
+        export_skins=True, export_morph=True, export_morph_normal=True, export_morph_tangent=False,
         export_animations=False, export_extras=True, export_apply=True,
         export_texcoords=False, export_normals=True, export_materials='EXPORT',
         export_def_bones=False, export_rest_position_armature=True,

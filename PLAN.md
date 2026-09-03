@@ -7,13 +7,13 @@ APPROVED in round 4/5 after 36 findings (log in scratchpad `PLAN-REVIEW-LOG.md`,
 - **Stage A (steps 1–9): DONE** — commits `0f8eece`, `2470766`, `06a17b7` on `graphics`; Codex cross-inspected
   (see PLAN-REVIEW-LOG.md "Post-build inspection — Stage A"). User confirmed the default vertical fist
   (`wrist.y = 0`, harness cells 1.1 / 2.1) is the correct Isshin Ryu standard.
-- **Stage B (steps 10–17): NEXT.** Already in place: `quat.js` `poseToBoneLocal` / `twistAboutY` /
-  `quatFromAxisAngle` / `conjQuat` with `tests/glb-pose.test.mjs` (rest-relative posing proven against
-  three's `Bone` hierarchy); Blender 4.5.3 headless verified (`"C:\Program Files\Blender Foundation\Blender 4.5\blender.exe" -b -noaudio -P`, glTF add-on present).
-  Remaining: `tools/dump-rig.mjs`, `tools/build-avatar.py`, `tools/build-avatar.ps1`, vendor GLTFLoader (+BufferGeometryUtils)
-  from three r169 `examples/jsm`, GLB driver in `avatar.js` (validate → cache rest orientations on the isolated root →
-  attach → `frustumCulled=false` → per-side morph targets → recolour `gi/belt/skin` → `onReady`), `tests/glb.test.mjs`,
-  Chrome smoke (`?avatar=missing.glb` fallback), then a fresh read-only Codex inspection.
+- **Stage B (steps 10–17): DONE** — commits `8a64ac8` + inspection fixes on `graphics`; Codex cross-inspected (see
+  PLAN-REVIEW-LOG.md "Post-build inspection — Stage B"). Rebuild the avatar with `.	oolsuild-avatar.ps1` after any
+  change to `rig.js` or `tools/build-avatar.py` (the viewer refuses a stale GLB by schema hash and falls back).
+- **Follow-ups (not started):** baked gi/belt texture (C2 amendment); smoother body geometry in `build-avatar.py`
+  (the GLB currently mirrors the mannequin's primitives as one skinned mesh); Phase 4 footwork; movement fine-tuning.
+- Codex on Windows: `codex exec` must run in the foreground (background/nohup loses the logon session → error 1312);
+  use `-c model_reasoning_effort="high"` to fit the 10-minute ceiling.
 - Test command: `node --import ./tests/three-resolver.mjs --test tests/*.test.mjs` (resolve hook for the bare `three` specifier).
 - Codex at xhigh can exceed 10 min on a big diff: run `codex exec` in the background and poll its `-o` file.
 
@@ -52,7 +52,7 @@ Two stages, both consuming the existing 17-joint skeleton unchanged:
 | D3 | Fist orientation knob | **`wrist.y` in radians, 0 = vertical fist** (thumb up when punching forward — the rig's current default). ±π/2 = horizontal. `mirrorPose` already negates `y`, so L/R are correct for free. **No existing pose gets a value now**; fine-tuning adds them where the dojo differs. GLB: a deform-only, non-ancestor `forearmTwist` helper bone receives half the **swing-twist-extracted** twist angle of the sampled wrist quaternion. |
 | D4 | Skeleton growth | None. Fingers, forearm twist, toes are mesh-side bones/meshes driven by the 17 sampled joints + hand-shape weights. |
 | C1 | Colours | Performer as today. Attacker already contrasts (`bunkai.js:90`: dark gi, dark-red belt) — keep. |
-| C2 | Surface | Flat colours in A; simple baked gi seam / belt texture in B. |
+| C2 | Surface | Flat colours in A. **Amended 2026-09-03 (Stage B inspection #7):** Stage B ships flat named materials too; a baked gi seam / belt texture is deferred to a follow-up (asset work, no contract impact — `build-avatar.py` owns it). |
 | C3 | Face | Eyes + brows (dark discs) in A; modelled in B. |
 | C4 | Camera | New **`hands`** preset (close, front-high, target at chest) and a **follow** toggle that keeps the orbit target on the performer's chest during embusen travel. |
 | C5 | Proportions | Realistic adult (rig.js lengths), limbs slightly thicker than now, hands ~19 cm. |

@@ -283,20 +283,30 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
   function validateGlb(scene) {
     const byName = {};
     scene.traverse((o) => { byName[o.name] = (byName[o.name] || []).concat(o); });
-    for (const n of JOINT_NAMES) {
+    const oneBone = (n, parent) => {
       if (!byName[n] || byName[n].length !== 1) return `bone "${n}" found ${byName[n]?.length ?? 0} times`;
-      const parent = RIG.JOINTS[n].parent;
+      if (!byName[n][0].isBone) return `"${n}" is not a Bone`;
       if (parent && byName[n][0].parent?.name !== parent) return `bone "${n}" parent is "${byName[n][0].parent?.name}", expected "${parent}"`;
+      return null;
+    };
+    for (const n of JOINT_NAMES) { const why = oneBone(n, RIG.JOINTS[n].parent); if (why) return why; }
+    for (const side of ['L', 'R']) {
+      const why = oneBone('forearmTwist' + side, 'elbow' + side) || oneBone('toes' + side, 'ankle' + side);
+      if (why) return why;
     }
-    for (const h of ['forearmTwistL', 'forearmTwistR']) if (!byName[h]) return `missing helper bone "${h}"`;
-    let skinnedMeshes = 0;
-    scene.traverse((o) => { if (o.isSkinnedMesh) skinnedMeshes++; });
-    if (!skinnedMeshes) return 'no SkinnedMesh';
+    const skinnedMeshes = [];
+    scene.traverse((o) => { if (o.isSkinnedMesh) skinnedMeshes.push(o); });
+    if (!skinnedMeshes.length) return 'no SkinnedMesh';
+    for (const m of skinnedMeshes) {                                   // every skin drives the validated bones
+      const names = new Set(m.skeleton.bones.map(b => b.name));
+      for (const n of JOINT_NAMES) if (!names.has(n)) return `mesh "${m.name}" skeleton lacks bone "${n}"`;
+    }
     for (const side of ['L', 'R']) {
       const m = byName['hand' + side]?.[0];
       if (!m || !m.isSkinnedMesh) return `hand${side} is not a SkinnedMesh`;
+      if (!m.morphTargetInfluences || !m.morphTargetDictionary) return `hand${side} has no morph targets`;
       for (const shape of HAND_SHAPES) {
-        if (shape !== 'fist' && m.morphTargetDictionary?.[shape] === undefined) return `hand${side} lacks morph target "${shape}"`;
+        if (shape !== 'fist' && m.morphTargetDictionary[shape] === undefined) return `hand${side} lacks morph target "${shape}"`;
       }
     }
     const mats = new Set();
@@ -312,6 +322,22 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
     const root = gltf.scene;
     const why = validateGlb(root);
     if (why) { console.error(`karateka: glb rejected (${why}); keeping the procedural avatar`); return; }
+    try {
+      adoptValidated(root);
+    } catch (e) {
+      // Transactional: anything thrown during setup or the first pose rolls back to the mannequin.
+      skinned = null;
+      if (root.parent) root.parent.remove(root);
+      proc.visible = true;
+      console.error(`karateka: glb adoption failed (${e?.message || e}); keeping the procedural avatar`);
+      return;
+    }
+    console.info('karateka: glb active');
+    ready = true;
+    for (const cb of readyCbs.splice(0)) cb();
+  }
+
+  function adoptValidated(root) {
     // Rest orientations are cached on the isolated root (identity ancestors),
     // BEFORE attaching under a possibly turned/moved body.
     root.updateMatrixWorld(true);
@@ -338,11 +364,8 @@ export function createKarateka({ gi = 0xf5f0e6, belt = 0x222222, skin = 0xc9a179
     });
     skinned = { bones, rest, hands, root };
     body.add(root);
-    proc.visible = false;
-    if (lastPose) setPose(lastPose);
-    console.info('karateka: glb active');
-    ready = true;
-    for (const cb of readyCbs.splice(0)) cb();
+    if (lastPose) setPose(lastPose);        // may throw on a malformed asset -> rollback above
+    proc.visible = false;                   // only once the skinned figure is posed
   }
 
   if (glb) {

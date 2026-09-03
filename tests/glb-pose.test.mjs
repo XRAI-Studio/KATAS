@@ -99,18 +99,21 @@ test('twistAboutY recovers the y (roll) component of an XYZ Euler wrist', () => 
   assert.ok(near(twistAboutY(eulerXYZToQuat({ z: -0.8 })), 0));
 });
 
-test('half-twist helper: rotating about the rig y axis by θ/2 through poseToBoneLocal gives a world twist of θ/2', () => {
-  const { bones, A, root } = syntheticArmature(11);
-  const theta = Math.PI / 2;
-  const qh = quatFromAxisAngle({ x: 0, y: 1, z: 0 }, theta / 2);
-  // treat the left wrist bone as the helper hanging off elbowL
-  bones.wristL.quaternion.copy(toT(poseToBoneLocal(qh, A.elbowL, A.wristL)));
-  root.updateMatrixWorld(true);
-  const wq = new THREE.Quaternion();
-  bones.wristL.getWorldQuaternion(wq);
-  const want = toT(mulQuat(qh, A.wristL));
-  assert.ok(Math.abs(wq.dot(want)) > 1 - 1e-9);
-  // and the rig-space rotation it carries is exactly θ/2 about +y
-  const rigRot = mulQuat({ x: wq.x, y: wq.y, z: wq.z, w: wq.w }, conjQuat(A.wristL));
-  assert.ok(near(twistAboutY(rigRot), theta / 2, 1e-9), `twist ${twistAboutY(rigRot)}`);
-});
+for (const side of ['L', 'R']) {
+  for (const theta of [Math.PI / 2, -Math.PI / 2]) {
+    test(`half-twist helper (${side}, θ=${theta > 0 ? '+' : '-'}π/2): poseToBoneLocal gives a world twist of θ/2 about the forearm`, () => {
+      const { bones, A, root } = syntheticArmature(11);
+      const qh = quatFromAxisAngle({ x: 0, y: 1, z: 0 }, theta / 2);
+      // the wrist bone stands in for the helper hanging off the elbow (same parent, same equation)
+      const w = 'wrist' + side, e = 'elbow' + side;
+      bones[w].quaternion.copy(toT(poseToBoneLocal(qh, A[e], A[w])));
+      root.updateMatrixWorld(true);
+      const wq = new THREE.Quaternion();
+      bones[w].getWorldQuaternion(wq);
+      const want = toT(mulQuat(qh, A[w]));
+      assert.ok(Math.abs(wq.dot(want)) > 1 - 1e-9);
+      const rigRot = mulQuat({ x: wq.x, y: wq.y, z: wq.z, w: wq.w }, conjQuat(A[w]));
+      assert.ok(near(twistAboutY(rigRot), theta / 2, 1e-9), `twist ${twistAboutY(rigRot)}`);
+    });
+  }
+}

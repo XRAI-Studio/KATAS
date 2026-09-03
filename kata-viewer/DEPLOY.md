@@ -20,6 +20,7 @@ Deploying means copying the contents of this `kata-viewer/` folder to your web s
    - `js/` (folder)
    - `data/` (folder)
    - `lib/` (folder)
+   - `assets/` (folder — the skinned avatar; without it the viewer shows the procedural mannequin)
    - Tip: zip the contents locally, upload the zip, then use File Manager's **Extract**.
 5. Visit your domain. Done.
 
