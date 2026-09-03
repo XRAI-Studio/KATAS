@@ -289,10 +289,11 @@ export function stepAt(timeline, t) {
 }
 
 export class Player {
-  constructor(timeline, { onStep, onKiai } = {}) {
+  constructor(timeline, { onStep, onKiai, onSeek } = {}) {
     this.timeline = timeline;
     this.onStep = onStep || (() => {});
     this.onKiai = onKiai || (() => {});
+    this.onSeek = onSeek || (() => {});      // any time jump (scrub, step buttons, replay)
     this._time = 0;
     this._speed = 1;
     this._playing = false;
@@ -304,7 +305,7 @@ export class Player {
   get speed() { return this._speed; }
 
   play() {
-    if (this._time >= this.timeline.duration) this._time = 0; // replay from start
+    if (this._time >= this.timeline.duration) this.seek(0); // replay from start
     this._playing = true;
   }
   pause() { this._playing = false; }
@@ -315,6 +316,7 @@ export class Player {
   seek(t) {
     this._time = Math.min(this.timeline.duration, Math.max(0, t));
     this._notifyStep(false);
+    this.onSeek(this._time);
   }
 
   seekStep(idx) {

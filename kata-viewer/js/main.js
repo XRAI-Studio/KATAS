@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { initScene } from './scene.js';
 import { createKarateka } from './avatar.js';
 import { POSES } from './poses.js';
@@ -29,6 +30,16 @@ const { scene, camera, renderer, setCameraPreset, tick: sceneTick } = ctx;
 const karateka = createKarateka();
 scene.add(karateka.group);
 
+// Follow-cam bookkeeping: any discontinuity (seek, kata load, preset tween,
+// drag end, model swap) requests a rebase, which is applied only after the
+// frame's pose has been applied — so it never observes a stale chest position.
+let rebasePending = true;
+const requestRebase = () => { rebasePending = true; };
+ctx.onTweenEnd = requestRebase;
+ctx.controls.addEventListener('end', requestRebase);
+karateka.onReady(requestRebase);
+const chestPos = new THREE.Vector3();
+
 const coach = createCoach();
 const bunkai = initBunkai(scene);
 
@@ -39,7 +50,7 @@ let lastPreset = null;
 const ui = initUI({
   katas: KATAS,
   onKataChange: loadKata,
-  onPreset: (name) => { lastPreset = name; setCameraPreset(name); },
+  onPreset: (name) => { lastPreset = name; setCameraPreset(name); requestRebase(); },
   getPlayer: () => player,
 });
 
@@ -53,6 +64,7 @@ document.getElementById('btn-link').addEventListener('click', async () => {
   q.set('t', player.time.toFixed(2));
   if (lastPreset) q.set('cam', lastPreset);
   if (document.getElementById('toggle-bunkai').checked) q.set('bunkai', '1');
+  if (document.getElementById('toggle-follow').checked) q.set('follow', '1');
   const url = location.origin + location.pathname + '?' + q.toString();
   linkOut.value = url;
   linkOut.classList.remove('hidden');
@@ -83,16 +95,18 @@ async function loadKata(file) {
         if (player && player.playing) coach.sayStep(step, player.speed);
       },
       onKiai: kiaiEffect,
+      onSeek: requestRebase,
     });
     ui.setTimeline(timeline);
     player.seek(0);
     applyTime(0);
+    requestRebase();
   } catch (e) {
     ui.showError(`Could not load kata file "${file}": ${e.message}. Other katas remain available.`);
   }
 }
 
-// Shareable / testable state via URL params: ?kata=chinto&t=30&play=1&bunkai=1&cam=side
+// Shareable / testable state via URL params: ?kata=chinto&t=30&play=1&bunkai=1&cam=side&follow=1
 async function applyUrlParams() {
   const q = new URLSearchParams(location.search);
   const kataParam = q.get('kata');
@@ -104,6 +118,11 @@ async function applyUrlParams() {
     bunkai.setEnabled(true);
   }
   if (q.get('cam')) { lastPreset = q.get('cam'); setCameraPreset(lastPreset); }
+  if (q.get('follow') === '1') {
+    document.getElementById('toggle-follow').checked = true;
+    ctx.setFollow(true);
+    requestRebase();
+  }
   const t = parseFloat(q.get('t'));
   if (player && !Number.isNaN(t)) { player.seek(t); applyTime(t); }
   if (player && q.get('play') === '1') player.play();
@@ -115,6 +134,10 @@ function applyTime(t) {
   karateka.setPose(sampled);
   karateka.group.position.set(sampled.embusen.x, 0, sampled.embusen.z);
   karateka.group.rotation.y = sampled.embusen.facing;
+  karateka.group.updateMatrixWorld(true);
+  karateka.getChestWorldPosition(chestPos);
+  if (rebasePending) { ctx.rebaseFollow(chestPos); rebasePending = false; }
+  else ctx.follow(chestPos);
   const step = stepAt(timeline, t);
   const u = Math.min(1, Math.max(0, (t - step.start) / Math.max(1e-9, step.end - step.start)));
   bunkai.update(step, u);
@@ -146,6 +169,10 @@ if (coach.available) {
 
 document.getElementById('toggle-bunkai').addEventListener('change', (e) =>
   bunkai.setEnabled(e.target.checked));
+document.getElementById('toggle-follow').addEventListener('change', (e) => {
+  ctx.setFollow(e.target.checked);
+  requestRebase();
+});
 
 // Render loop
 let last = performance.now();

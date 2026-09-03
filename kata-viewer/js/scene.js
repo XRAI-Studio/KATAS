@@ -10,6 +10,8 @@ const CAMERA_PRESETS = {
   side:     { pos: [5.2, 1.6, 0.8], target: [0, 0.9, 0.8] },
   rear:     { pos: [0, 1.7, -3.6],  target: [0, 0.9, 0.8] },
   overhead: { pos: [0, 6.8, 1.2],   target: [0, 0, 0.8] },
+  // Close-up for judging hand shape and fist orientation.
+  hands:    { pos: [0.6, 1.5, 2.0],  target: [0, 1.15, 0.6] },
 };
 
 const woodDark = () => new THREE.MeshStandardMaterial({ color: 0x3d2b1a, roughness: 0.75 });
@@ -236,6 +238,7 @@ export function initScene(canvas) {
   buildLights(scene);
 
   let tween = null;
+  let onTweenEnd = () => {};
   function setCameraPreset(name) {
     const p = CAMERA_PRESETS[name];
     if (!p) return;
@@ -248,13 +251,38 @@ export function initScene(canvas) {
     };
   }
 
+  // Follow-cam: keep the orbit target on the performer. Each tick the camera
+  // and target move by the performer's displacement since the last tracked
+  // position, so the user's orbit offset is preserved. `rebaseFollow` resets
+  // the tracked position without moving the camera — the app calls it after
+  // every discontinuity (seek, kata load, preset tween, drag end, model swap).
+  let following = false;
+  let suspended = false;                  // while the user drags
+  const tracked = new THREE.Vector3();
+  let trackedValid = false;
+  const delta = new THREE.Vector3();
+  controls.addEventListener('start', () => { suspended = true; });
+  controls.addEventListener('end', () => { suspended = false; trackedValid = false; });
+  function setFollow(on) { following = !!on; trackedValid = false; }
+  function rebaseFollow(pos) { tracked.copy(pos); trackedValid = true; }
+  function follow(pos) {
+    if (!following || suspended || tween) { trackedValid = false; return; }
+    if (!trackedValid) { rebaseFollow(pos); return; }
+    delta.subVectors(pos, tracked);
+    if (delta.lengthSq() > 0) {
+      controls.target.add(delta);
+      camera.position.add(delta);
+    }
+    tracked.copy(pos);
+  }
+
   function tick(dt) {
     if (tween) {
       tween.t = Math.min(1, tween.t + dt * 2.2);
       const u = tween.t * tween.t * (3 - 2 * tween.t);
       camera.position.lerpVectors(tween.fromPos, tween.toPos, u);
       controls.target.lerpVectors(tween.fromTarget, tween.toTarget, u);
-      if (tween.t >= 1) tween = null;
+      if (tween.t >= 1) { tween = null; trackedValid = false; onTweenEnd(); }
     }
     controls.update();
   }
@@ -268,5 +296,10 @@ export function initScene(canvas) {
   window.addEventListener('resize', resize);
   resize();
 
-  return { scene, camera, renderer, controls, setCameraPreset, tick };
+  return {
+    scene, camera, renderer, controls, setCameraPreset, tick,
+    setFollow, follow, rebaseFollow,
+    get following() { return following; },
+    set onTweenEnd(cb) { onTweenEnd = cb || (() => {}); },
+  };
 }

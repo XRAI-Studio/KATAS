@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Kata viewer — hand acceptance harness</title>
+<script type="importmap">
+{ "imports": { "three": "../lib/three/three.module.js" } }
+</script>
+<style>
+  html, body { margin: 0; height: 100%; background: #1c140c; color: #eee; font: 13px system-ui, sans-serif; }
+  canvas { display: block; width: 100vw; height: 100vh; }
+  #legend { position: fixed; left: 0; right: 0; bottom: 0; display: flex; gap: 4px; padding: 8px; }
+  #legend div { flex: 1; text-align: center; background: rgba(0,0,0,.55); padding: 6px 4px; border-radius: 4px; }
+  #legend b { display: block; color: #ffd27a; }
+  #hint { position: fixed; top: 8px; left: 8px; background: rgba(0,0,0,.55); padding: 6px 8px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<canvas id="scene"></canvas>
+<div id="hint">Row 1: fist orientation via adjust.wrist.y &nbsp;·&nbsp; Row 2: hand shapes. Each cell: its own camera on the striking hand. Poses sampled through buildClip/sampleClip (the real contract).</div>
+<div id="legend"></div>
+<script type="module">
+import * as THREE from 'three';
+import { createKarateka } from '../js/avatar.js';
+import { POSES } from '../js/poses.js';
+import { buildClip, sampleClip } from '../js/player.js';
+
+// Each case: label, parts, optional adjust. Sampled at the clip's first
+// keyframe so the avatar receives quaternion joints + hand weight maps.
+const ROWS = [
+  [
+    { label: 'punchMidR, wristR.y = 0 (vertical)', parts: ['seisanDachiL', 'punchMidR', 'chamberL'] },
+    { label: 'punchMidR, wristR.y = +π/2', parts: ['seisanDachiL', 'punchMidR', 'chamberL'], adjust: { wristR: { y: Math.PI / 2 } } },
+    { label: 'punchMidR, wristR.y = −π/2', parts: ['seisanDachiL', 'punchMidR', 'chamberL'], adjust: { wristR: { y: -Math.PI / 2 } } },
+    { label: 'punchMidL, wristL.y = 0 (vertical)', parts: ['seisanDachiR', 'punchMidL', 'chamberR'] },
+    { label: 'punchMidL, wristL.y = +π/2', parts: ['seisanDachiR', 'punchMidL', 'chamberR'], adjust: { wristL: { y: Math.PI / 2 } } },
+    { label: 'punchMidL, wristL.y = −π/2', parts: ['seisanDachiR', 'punchMidL', 'chamberR'], adjust: { wristL: { y: -Math.PI / 2 } } },
+  ],
+  [
+    { label: 'fist — punchMidR', parts: ['seisanDachiL', 'punchMidR', 'chamberL'] },
+    { label: 'open — shutoMidR', parts: ['seisanDachiL', 'shutoMidR', 'chamberL'] },
+    { label: 'spear — nukiteR', parts: ['seisanDachiL', 'nukiteR', 'chamberL'] },
+    { label: 'palm — shoteR', parts: ['seisanDachiL', 'shoteR', 'chamberL'] },
+    { label: 'open both — doubleShutoThroat', parts: ['seisanDachiL', 'doubleShutoThroat'] },
+    { label: 'ready (fists at rest)', parts: ['ready'] },
+  ],
+];
+
+const canvas = document.getElementById('scene');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.setScissorTest(true);
+
+// One scene per case, one viewport per case, each camera aimed at the hand
+// that matters — so a fist is never confused with a neighbour's.
+const cells = [];
+ROWS.forEach((row, r) => row.forEach((c, i) => {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1c140c);
+  scene.add(new THREE.AmbientLight(0xfff1dc, 0.6));
+  const key = new THREE.DirectionalLight(0xfff2dd, 1.6);
+  key.position.set(3, 6, 5); key.castShadow = true;
+  scene.add(key);
+  const fill = new THREE.DirectionalLight(0xd8e2ff, 0.4);
+  fill.position.set(-4, 3, -2);
+  scene.add(fill);
+  const floor = new THREE.Mesh(new THREE.PlaneGeometry(20, 20), new THREE.MeshStandardMaterial({ color: 0x8a6a44, roughness: 0.9 }));
+  floor.rotation.x = -Math.PI / 2; floor.receiveShadow = true;
+  scene.add(floor);
+
+  const k = createKarateka();
+  const clip = buildClip([{ time: 0, parts: c.parts, adjust: c.adjust }, { time: 1, parts: c.parts }], POSES);
+  k.setPose(sampleClip(clip, 0));
+  scene.add(k.group);
+  k.group.updateMatrixWorld(true);
+
+  // Aim at the wrist named in the case (R unless the label says L), from the
+  // front, a little above and to the outside of the hand.
+  const side = /L\b|wristL/.test(c.label) ? 'L' : 'R';
+  const target = k.getJoint('wrist' + side).getWorldPosition(new THREE.Vector3());
+  target.y -= 0.03;
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.05, 20);
+  const sx = side === 'L' ? 1 : -1;
+  camera.position.copy(target).add(new THREE.Vector3(sx * 0.45, 0.35, 0.9));
+  camera.lookAt(target);
+  cells.push({ scene, camera, row: r, col: i, label: c.label });
+}));
+
+const legend = document.getElementById('legend');
+legend.remove();
+const labels = document.createElement('div');
+labels.id = 'labels';
+document.body.appendChild(labels);
+const COLS = ROWS[0].length, NROWS = ROWS.length;
+for (const cell of cells) {
+  const d = document.createElement('div');
+  d.textContent = `${cell.row + 1}.${cell.col + 1}  ${cell.label}`;
+  d.style.cssText = `position:fixed;left:${(cell.col / COLS) * 100}%;top:${(cell.row / NROWS) * 100}%;padding:4px 6px;background:rgba(0,0,0,.6);font-size:12px`;
+  labels.appendChild(d);
+}
+
+function render() {
+  const W = window.innerWidth, H = window.innerHeight;
+  renderer.setSize(W, H, false);
+  const cw = W / COLS, ch = H / NROWS;
+  for (const cell of cells) {
+    const x = cell.col * cw, y = H - (cell.row + 1) * ch;   // GL origin is bottom-left
+    renderer.setViewport(x, y, cw, ch);
+    renderer.setScissor(x, y, cw, ch);
+    cell.camera.aspect = cw / ch;
+    cell.camera.updateProjectionMatrix();
+    renderer.render(cell.scene, cell.camera);
+  }
+}
+window.addEventListener('resize', render);
+renderer.setAnimationLoop(render);
+</script>
+</body>
+</html>

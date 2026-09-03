@@ -49,6 +49,9 @@ Two more that are timing-adjacent:
 |---|---|
 | "look before you turn" / "no head turn here" | step **`look`**: `left` / `right` / `none` |
 | "the kiai is on the wrong technique" | see §8 — currently an engine limitation |
+| "that fist is horizontal / palm down" (one moment) | keyframe **`adjust`**: `{ "wristR": { "y": 1.5708 } }` — radians on the wrist joint, merged **per axis** onto the pose (the technique's own wrist flexion is kept). `0` = vertical fist (Isshin Ryu default, thumb up). Palm **down** = `wristR.y +π/2` / `wristL.y −π/2` (the sign mirrors per side); palm up is the opposite. Use `overrides` instead when you want to *replace* a joint outright. |
+| "that fist is horizontal" (every use of the technique) | `wristR: { y }` on the pose in `poses.js` — `mirrorPose` mirrors the sign for the left version automatically |
+| "this is a spear hand / palm heel / knife hand" | pose **`hands`** metadata in `poses.js`: `fist` / `open` (shuto, haito) / `spear` (nukite) / `palm` (shote) |
 
 ---
 

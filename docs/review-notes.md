@@ -38,7 +38,8 @@ Links keep working on the deployed site — only the host changes.
 | **Keyframe** — one moment in one step | "step 7: the low shuto comes *after* the grab, not with it" | that step's `keyframes` in `kata-viewer/data/<kata>.json` | that step only |
 | **Timing** — pace, holds, flow | "too slow", "hold the punch longer", "don't stop here, flow through" | `beats`, keyframe `t`, `ease` (`kime` / `soft` / `pass`), `hold` (beats) — **see [timing-guide.md](timing-guide.md)** | that step |
 | **Look / head** | "look over the left shoulder here", "no head turn here" | `look` (`left` / `right` / `none`) on the step being entered, or a `head` override | that step |
-| **Hands** | "this block is open-hand in our dojo" | hand metadata in `poses.js` | every use of that pose |
+| **Hands** | "this block is open-hand in our dojo", "nukite is a spear hand" | `hands` metadata in `poses.js` (`fist` / `open` / `spear` / `palm`) | every use of that pose |
+| **Fist orientation** | "the punch is palm-down here", "vertical fist" | keyframe `adjust: { wristR: { y } }` for one moment, or the pose's `wristR.y` in `poses.js` for every use — **see [timing-guide.md](timing-guide.md)**; check it at the **Hands** camera preset or in `kata-viewer/dev/hands.html` | that step, or that pose |
 | **Footwork / stepping mechanics** — Phase 4 | "the stepping foot slides in a crescent through the support foot", "heel stays down", "pivot on the ball of the front foot" | Phase 4 design: foot lock + leg IK in `player.js` | a global rule, or a rule per stance transition |
 | **Embusen** — where a step lands / faces | "step 9 lands further to the left" | `embusen` on the step | that step |
 | **Bunkai** | "attacker grabs the lapel from the front here" | `bunkai` on the step; attack clips in `bunkai.js` | that step |
