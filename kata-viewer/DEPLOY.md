@@ -1,4 +1,8 @@
 # Deploying the Kata Viewer to Hostinger
+# first how to play on locakserver
+
+The local preview server on port 8420 has stopped. Whenever you want to view the kata viewer again, just run .\serve.ps1 from the repo root and open http://localhost:8420 — nothing else changed, and all the work remains committed and pushed to PR #1.
+------------------------------
 
 The app is a pure static site — no server code, no database, no build step.
 Deploying means copying the contents of this `kata-viewer/` folder to your web space.
