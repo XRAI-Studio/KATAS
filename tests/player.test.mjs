@@ -198,15 +198,16 @@ test('every segment curve is monotonic and hits its endpoints', () => {
   }
 });
 
-test('hand openness blends across a segment into an open-hand technique', () => {
+test('hand shape blends across a segment into an open-hand technique', () => {
   const clip = buildClip([
     { time: 0, parts: ['seisanDachiR', 'chamberR'], ease: 'soft' },
     { time: 1, parts: ['seisanDachiR', 'shutoLowR'], ease: 'soft' },
   ], POSES, { hold: 0 });
-  assert.deepEqual(sampleClip(clip, 0).hands, { L: 0, R: 0 });
-  assert.deepEqual(sampleClip(clip, 1).hands, { L: 0, R: 1 });
+  assert.equal(sampleClip(clip, 0).hands.R.fist, 1);
+  assert.equal(sampleClip(clip, 1).hands.R.open, 1);
+  assert.equal(sampleClip(clip, 1).hands.L.fist, 1);
   const midR = sampleClip(clip, 0.5).hands.R;
-  assert.ok(midR > 0 && midR < 1, `mid hand blend ${midR}`);
+  assert.ok(midR.open > 0 && midR.open < 1 && near(midR.fist + midR.open, 1), `mid hand blend ${JSON.stringify(midR)}`);
 });
 
 test('sampling is pure — same t gives identical pose', () => {

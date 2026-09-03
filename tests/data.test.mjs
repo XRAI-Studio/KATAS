@@ -35,6 +35,28 @@ test('validateKata rejects bad ease, hold and look values and accepts good ones'
   assert.deepEqual(validateKata(k, 'x.json'), []);
 });
 
+test('validateKata checks overrides and adjust the same way: known joint, x/y/z axes, finite numbers', () => {
+  const base = () => ({
+    name: 'X', steps: [{
+      id: 1, label: 'a', coachCall: 'a', beats: 2, kiai: true,
+      embusen: { x: 0, z: 0, facing: 0 }, transition: { known: true },
+      keyframes: [{ t: 0, stance: 'ready' }, { t: 1, stance: 'ready', arms: ['punchMidR'] }],
+    }],
+  });
+  for (const field of ['overrides', 'adjust']) {
+    let k = base(); k.steps[0].keyframes[1][field] = { wristR: { y: 1.57 } };
+    assert.deepEqual(validateKata(k, 'x.json'), [], `${field} good`);
+    k = base(); k.steps[0].keyframes[1][field] = { wristQ: { y: 1 } };
+    assert.ok(validateKata(k, 'x.json').some(e => e.includes(`${field} unknown joint`)), `${field} joint`);
+    k = base(); k.steps[0].keyframes[1][field] = { wristR: { w: 1 } };
+    assert.ok(validateKata(k, 'x.json').some(e => e.includes('unknown axis')), `${field} axis`);
+    k = base(); k.steps[0].keyframes[1][field] = { wristR: { y: 'lots' } };
+    assert.ok(validateKata(k, 'x.json').some(e => e.includes('finite number')), `${field} number`);
+    k = base(); k.steps[0].keyframes[1][field] = [1];
+    assert.ok(validateKata(k, 'x.json').some(e => e.includes('must be an object')), `${field} shape`);
+  }
+});
+
 import { samplePose } from '../kata-viewer/js/player.js';
 import { footSoleY } from '../kata-viewer/js/rig.js';
 
@@ -49,7 +71,10 @@ for (const file of KATA_FILES) {
       }
       for (const k of ['x', 'y', 'z', 'ry']) assert.ok(Number.isFinite(p.root[k]), `${file} t=${t.toFixed(2)} root.${k}`);
       for (const k of ['x', 'z', 'facing']) assert.ok(Number.isFinite(p.embusen[k]), `${file} t=${t.toFixed(2)} embusen.${k}`);
-      for (const s of ['L', 'R']) assert.ok(p.hands[s] >= 0 && p.hands[s] <= 1, `${file} t=${t.toFixed(2)} hands.${s}=${p.hands[s]}`);
+      for (const s of ['L', 'R']) {
+        const sum = Object.values(p.hands[s]).reduce((a, b) => a + b, 0);
+        assert.ok(Math.abs(sum - 1) < 1e-9, `${file} t=${t.toFixed(2)} hands.${s} weights sum ${sum}`);
+      }
       assert.ok(p.air >= 0 && p.air <= 1, `${file} t=${t.toFixed(2)} air=${p.air}`);
       if (p.air === 0) assert.ok(Math.abs(footSoleY(p)) < 1e-6, `${file} t=${t.toFixed(2)} sole=${footSoleY(p)}`);
     }

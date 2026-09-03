@@ -14,7 +14,7 @@ test('techniques carry kime metadata; chambers and guards do not', () => {
 test('open-hand techniques mark the striking hand open, mirrored per side', () => {
   assert.deepEqual(POSES.shutoLowR.hands, { R: 'open' });
   assert.deepEqual(POSES.shutoLowL.hands, { L: 'open' });
-  assert.deepEqual(POSES.nukiteR.hands, { R: 'open' });
+  assert.deepEqual(POSES.nukiteR.hands, { R: 'spear' });   // nukite is a spear hand
   assert.deepEqual(POSES.doubleShutoThroat.hands, { L: 'open', R: 'open' });
   assert.deepEqual(POSES.archerBlockL.hands, { L: 'open', R: 'open' });
   assert.deepEqual(POSES.punchMidR.hands, { R: 'fist' });   // a punch explicitly makes a fist

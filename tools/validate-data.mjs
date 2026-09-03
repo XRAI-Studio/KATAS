@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { POSES } from '../kata-viewer/js/poses.js';
+import { POSES, JOINT_NAMES } from '../kata-viewer/js/poses.js';
 import { buildTimeline } from '../kata-viewer/js/player.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
@@ -14,6 +14,22 @@ export const ALLOWED_ATTACKS = [
 ];
 
 const EASES = ['kime', 'soft', 'pass'];
+const AXES = ['x', 'y', 'z'];
+
+// `overrides` (whole-joint) and `adjust` (per-axis) share one shape:
+// { jointName: { x?, y?, z? } } with finite radians.
+function validateJointMap(map, field, err, at) {
+  if (map === undefined) return;
+  if (!map || typeof map !== 'object' || Array.isArray(map)) { err(`${at}: ${field} must be an object`); return; }
+  for (const [name, axes] of Object.entries(map)) {
+    if (!JOINT_NAMES.includes(name)) err(`${at}: ${field} unknown joint "${name}"`);
+    if (!axes || typeof axes !== 'object' || Array.isArray(axes)) { err(`${at}: ${field}.${name} must be an object`); continue; }
+    for (const [k, v] of Object.entries(axes)) {
+      if (!AXES.includes(k)) err(`${at}: ${field}.${name} unknown axis "${k}" (x|y|z)`);
+      else if (typeof v !== 'number' || !Number.isFinite(v)) err(`${at}: ${field}.${name}.${k} must be a finite number`);
+    }
+  }
+}
 const LOOKS = ['left', 'right', 'none'];
 
 export function loadKata(file) {
@@ -50,6 +66,8 @@ export function validateKata(kata, file) {
       prevT = kf.t;
       if (kf.ease !== undefined && !EASES.includes(kf.ease)) err(`${at}: bad ease "${kf.ease}" (kime|soft|pass)`);
       if (kf.hold !== undefined && !(typeof kf.hold === 'number' && kf.hold >= 0)) err(`${at}: bad hold "${kf.hold}" (beats >= 0)`);
+      validateJointMap(kf.overrides, 'overrides', err, at);
+      validateJointMap(kf.adjust, 'adjust', err, at);
       for (const name of [kf.stance, ...(kf.arms || []), ...(kf.legs || [])]) {
         if (name && !POSES[name]) err(`${at}: unknown pose "${name}"`);
       }
