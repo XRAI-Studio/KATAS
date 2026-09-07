@@ -1,0 +1,260 @@
+{
+  "kata": "seisan",
+  "title": "Seisan",
+  "steps": 23,
+  "questions": [
+    {
+      "id": "seisan-01",
+      "category": "movement",
+      "prompt": "Seisan opens with three advancing steps. What does the first step combine?",
+      "choices": [
+        "A left middle block followed by a right punch",
+        "A double high block",
+        "A right front kick",
+        "A left backfist"
+      ],
+      "answer": 0,
+      "step": 1
+    },
+    {
+      "id": "seisan-02",
+      "category": "movement",
+      "prompt": "After the three advancing punches, what technique is done with a shuffle forward?",
+      "choices": [
+        "Double low shuto block",
+        "Double high block",
+        "Left middle shuto block",
+        "Heel scoop and throw"
+      ],
+      "answer": 1,
+      "step": 4
+    },
+    {
+      "id": "seisan-03",
+      "category": "movement",
+      "prompt": "At step 5 you pivot 180 degrees to face the rear. What do the hands do?",
+      "choices": [
+        "Double low shuto block or strike",
+        "Double high block",
+        "Right backfist",
+        "Grab and pull"
+      ],
+      "answer": 0,
+      "step": 5
+    },
+    {
+      "id": "seisan-04",
+      "category": "movement",
+      "prompt": "What is the rhythm of the block, two punches, kick, punch combination on the side lines?",
+      "choices": [
+        "One long beat",
+        "A 1-2-3-4 rhythm: block, two punches, kick, punch",
+        "Two beats with a long pause",
+        "Everything at once"
+      ],
+      "answer": 1,
+      "step": 9
+    },
+    {
+      "id": "seisan-05",
+      "category": "movement",
+      "prompt": "Which stance do you drop into after the front-line combination at step 11?",
+      "choices": [
+        "Cat stance",
+        "Naihanchi stance",
+        "Seiunchin stance",
+        "Chinto stance"
+      ],
+      "answer": 2,
+      "step": 11
+    },
+    {
+      "id": "seisan-06",
+      "category": "movement",
+      "prompt": "How does Seisan end after the final punch?",
+      "choices": [
+        "Three fast punches",
+        "A jump kick",
+        "A step back to cat, a heel scoop with the left hand and a shote across the foot as a throw, then bow",
+        "A double collarbone strike"
+      ],
+      "answer": 2,
+      "step": 22
+    },
+    {
+      "id": "seisan-07",
+      "category": "bunkai",
+      "prompt": "In the bunkai for steps 1 to 4, what is the retracting hand used for?",
+      "choices": [
+        "Nothing, it just returns to the hip",
+        "Wrist control, elbow lock or a takedown",
+        "Blocking a kick",
+        "Signalling the next attacker"
+      ],
+      "answer": 1,
+      "step": 1
+    },
+    {
+      "id": "seisan-08",
+      "category": "bunkai",
+      "prompt": "The shote, haito, low shuto and grab-and-pull sequence at steps 6 to 8 is mainly about what?",
+      "choices": [
+        "Long-range kicking",
+        "High-line defence, limb clearing, low strikes and arm control",
+        "Ground fighting",
+        "Escaping a rear bear hug"
+      ],
+      "answer": 1,
+      "step": 6
+    },
+    {
+      "id": "seisan-09",
+      "category": "bunkai",
+      "prompt": "In the side-line combination, what job does the final punch do?",
+      "choices": [
+        "It finishes the attacker after their attack was stopped and their structure disrupted",
+        "It is only for show",
+        "It warns the next attacker",
+        "It resets your stance"
+      ],
+      "answer": 0,
+      "step": 9
+    },
+    {
+      "id": "seisan-10",
+      "category": "bunkai",
+      "prompt": "What is the end-of-fight idea behind the leg scoop and throw at the close?",
+      "choices": [
+        "Bow to the judges",
+        "Dump the leg so the attacker cannot pursue",
+        "Stretch the hamstring",
+        "Start the kata again"
+      ],
+      "answer": 1,
+      "step": 22
+    },
+    {
+      "id": "seisan-11",
+      "category": "bunkai",
+      "prompt": "The backfist from side stance at step 13 targets what?",
+      "choices": [
+        "The knee",
+        "The jaw, temple, or the hand holding a weapon",
+        "The foot",
+        "The shoulder blade"
+      ],
+      "answer": 1,
+      "step": 13
+    },
+    {
+      "id": "seisan-12",
+      "category": "kiai",
+      "prompt": "Where does the main kiai in Seisan usually fall?",
+      "choices": [
+        "On the opening bow",
+        "On the first middle block",
+        "On the final kick-land-punch with the right punch",
+        "On the double high block"
+      ],
+      "answer": 2,
+      "step": 21
+    },
+    {
+      "id": "seisan-13",
+      "category": "kiai",
+      "prompt": "How should breathing work on the big techniques of Seisan?",
+      "choices": [
+        "Hold the breath throughout",
+        "Natural breathing with a sharper exhale on major techniques and a longer breath on the final sequence",
+        "Breathe in on every punch",
+        "Only breathe between steps"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "seisan-14",
+      "category": "balance",
+      "prompt": "What goes wrong if the Seisan stance gets too long or too narrow?",
+      "choices": [
+        "Nothing, both are fine",
+        "Stability and power are lost",
+        "It becomes a cat stance",
+        "You cannot see the attacker"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "seisan-15",
+      "category": "balance",
+      "prompt": "What is the role of the cat stance between sequences in Seisan?",
+      "choices": [
+        "To rest",
+        "A light front leg and readiness for lateral movement or a new opponent",
+        "To kick higher",
+        "To hide the hands"
+      ],
+      "answer": 1,
+      "step": 12
+    },
+    {
+      "id": "seisan-16",
+      "category": "balance",
+      "prompt": "Which is the rooted stance Seisan drops into for finishing moves?",
+      "choices": [
+        "Seiunchin",
+        "Cat stance",
+        "Heiko",
+        "Musubi"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "seisan-17",
+      "category": "history",
+      "prompt": "Which Okinawan style is the Isshin Ryu Seisan derived from?",
+      "choices": [
+        "Goju-ryu",
+        "Shorin-ryu",
+        "Uechi-ryu",
+        "Shotokan"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "seisan-18",
+      "category": "history",
+      "prompt": "Seisan is usually introduced when in Isshin Ryu?",
+      "choices": [
+        "As a black belt kata",
+        "As the first empty-hand kata after basics",
+        "Only after Chinto",
+        "Only with weapons"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "seisan-19",
+      "category": "history",
+      "prompt": "What fist does Isshin Ryu use for the punches in Seisan?",
+      "choices": [
+        "A horizontal twisting fist",
+        "A vertical fist that returns quickly to chamber",
+        "An open palm",
+        "A hammerfist only"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "seisan-20",
+      "category": "history",
+      "prompt": "What overall shape does Seisan's floor pattern make?",
+      "choices": [
+        "A circle",
+        "A cross or H: straight forward, a 180 turn, then 90 degree side lines back to the front",
+        "A triangle",
+        "A single straight line"
+      ],
+      "answer": 1
+    }
+  ]
+}

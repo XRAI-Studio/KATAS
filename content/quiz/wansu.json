@@ -1,0 +1,262 @@
+{
+  "kata": "wansu",
+  "title": "Wansu",
+  "steps": 24,
+  "questions": [
+    {
+      "id": "wansu-01",
+      "category": "movement",
+      "prompt": "What is the ready guard at the start of Wansu?",
+      "choices": [
+        "Both fists at the hips",
+        "Left hand open with the right fist on top",
+        "Hands crossed at the chest",
+        "Hands behind the back"
+      ],
+      "answer": 1,
+      "step": 0
+    },
+    {
+      "id": "wansu-02",
+      "category": "movement",
+      "prompt": "What is the first movement?",
+      "choices": [
+        "Turn 45 degrees left, low block and straight punch on that line",
+        "A jump kick",
+        "A double collarbone strike",
+        "Step back into cat"
+      ],
+      "answer": 0,
+      "step": 1
+    },
+    {
+      "id": "wansu-03",
+      "category": "movement",
+      "prompt": "At step 3 the open hand side block is followed by what?",
+      "choices": [
+        "A backfist",
+        "A finger thrust (nukite) to the body, then the hand covers",
+        "A low block",
+        "A knee lift"
+      ],
+      "answer": 1,
+      "step": 3
+    },
+    {
+      "id": "wansu-04",
+      "category": "movement",
+      "prompt": "What footwork sets up the angle punch at steps 4 and 7?",
+      "choices": [
+        "Stepping straight forward",
+        "Stepping behind, one foot behind the other, to move off line",
+        "A crossover to the side",
+        "A spin"
+      ],
+      "answer": 1,
+      "step": 4
+    },
+    {
+      "id": "wansu-05",
+      "category": "movement",
+      "prompt": "What do the hands do just before the dump?",
+      "choices": [
+        "A double high block",
+        "They stack in front of the torso",
+        "They chamber at the hips",
+        "They clap"
+      ],
+      "answer": 1,
+      "step": 11
+    },
+    {
+      "id": "wansu-06",
+      "category": "movement",
+      "prompt": "What happens at steps 8 and 9?",
+      "choices": [
+        "A small body shift to avoid a punch, then a straight punch and an angle punch",
+        "Two front kicks",
+        "A throw",
+        "A hair grab"
+      ],
+      "answer": 0,
+      "step": 8
+    },
+    {
+      "id": "wansu-07",
+      "category": "bunkai",
+      "prompt": "Why is Wansu called the 'dumping kata'?",
+      "choices": [
+        "Because it ends by dumping the hands",
+        "Because of its signature body slam or throw near the middle",
+        "Because it drops into low stances",
+        "Because it drops the guard"
+      ],
+      "answer": 1,
+      "step": 12
+    },
+    {
+      "id": "wansu-08",
+      "category": "bunkai",
+      "prompt": "What does the nukite at step 3 aim at?",
+      "choices": [
+        "The shin",
+        "A soft target such as the solar plexus, neck or groin",
+        "The forehead",
+        "The back of the hand"
+      ],
+      "answer": 1,
+      "step": 3
+    },
+    {
+      "id": "wansu-09",
+      "category": "bunkai",
+      "prompt": "The 'avoid, straight punch, angle punch' idea at steps 8, 9 and 16 teaches what?",
+      "choices": [
+        "Standing still",
+        "Get out of the way first, then hit, then hit a secondary target",
+        "Kick before punch",
+        "Grab the hair"
+      ],
+      "answer": 1,
+      "step": 16
+    },
+    {
+      "id": "wansu-10",
+      "category": "bunkai",
+      "prompt": "What do the knee lifts at steps 14 and 15 add after the side block and punch?",
+      "choices": [
+        "A rest",
+        "A knee strike, or a stomp depending on the teacher",
+        "A jump",
+        "A turn"
+      ],
+      "answer": 1,
+      "step": 14
+    },
+    {
+      "id": "wansu-11",
+      "category": "bunkai",
+      "prompt": "The front kicks at step 10 serve what purpose?",
+      "choices": [
+        "A forward entry to stop an advancing attacker",
+        "A retreat",
+        "A celebration",
+        "Balance practice only"
+      ],
+      "answer": 0,
+      "step": 10
+    },
+    {
+      "id": "wansu-12",
+      "category": "kiai",
+      "prompt": "Where do the kiai in Wansu usually fall?",
+      "choices": [
+        "On the first low block",
+        "On the dump and on the final strong strikes",
+        "On the ready guard",
+        "On every step"
+      ],
+      "answer": 1,
+      "step": 12
+    },
+    {
+      "id": "wansu-13",
+      "category": "kiai",
+      "prompt": "How does the pace of Wansu change?",
+      "choices": [
+        "It is all slow",
+        "Medium pace with explosive bursts on the dump and the kicking combinations",
+        "It is all as fast as possible",
+        "It speeds up steadily to the end"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "wansu-14",
+      "category": "balance",
+      "prompt": "What does 'off-line' mean in Wansu's angular entries?",
+      "choices": [
+        "Standing on one leg",
+        "Stepping to an angle so you are no longer on the attacker's line of attack",
+        "Lying down",
+        "Turning your back"
+      ],
+      "answer": 1,
+      "step": 1
+    },
+    {
+      "id": "wansu-15",
+      "category": "balance",
+      "prompt": "What is the hardest balance moment in Wansu?",
+      "choices": [
+        "The ready guard",
+        "Loading the opponent onto the hip or shoulder and pivoting for the dump, then setting the stance",
+        "The first punch",
+        "The bow"
+      ],
+      "answer": 1,
+      "step": 12
+    },
+    {
+      "id": "wansu-16",
+      "category": "balance",
+      "prompt": "Why does Wansu get called the 'strong arm form'?",
+      "choices": [
+        "It uses only one arm",
+        "Its strong linear punches and blocks",
+        "It is done with weights",
+        "It has no kicks"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "wansu-17",
+      "category": "history",
+      "prompt": "Which style did Wansu come into Isshin Ryu from?",
+      "choices": [
+        "Shorin-ryu",
+        "Goju-ryu",
+        "Uechi-ryu",
+        "Kyokushin"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "wansu-18",
+      "category": "history",
+      "prompt": "Who is the kata traditionally said to be named after?",
+      "choices": [
+        "A Chinese envoy to Okinawa, Wang Ji (Wanshu)",
+        "An Okinawan king",
+        "A Japanese general",
+        "A Buddhist monk"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "wansu-19",
+      "category": "history",
+      "prompt": "When is Wansu usually taught?",
+      "choices": [
+        "First",
+        "As a mid-level kata, often after Naihanchi",
+        "Only at black belt",
+        "Only with sai"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "wansu-20",
+      "category": "history",
+      "prompt": "In the viewer, several late steps are marked 'reconstructed'. What does that mean?",
+      "choices": [
+        "They are wrong",
+        "They were rebuilt from lineage descriptions rather than complete notes, and your dojo's version rules",
+        "They should be skipped",
+        "They are kiai points"
+      ],
+      "answer": 1,
+      "step": 17
+    }
+  ]
+}
