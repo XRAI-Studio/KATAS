@@ -3,8 +3,8 @@
 //
 //   node tools/timing-map.mjs            # seisan -> stdout
 //   node tools/timing-map.mjs seisan > docs/seisan-timing.md
-import { POSES } from '../kata-viewer/js/poses.js';
-import { buildTimeline, SECONDS_PER_BEAT, KIME_HOLD_BEATS } from '../kata-viewer/js/player.js';
+import { POSES } from '../public/js/poses.js';
+import { buildTimeline, SECONDS_PER_BEAT, KIME_HOLD_BEATS } from '../public/js/player.js';
 import { loadKata } from './validate-data.mjs';
 
 const DEFAULT_HOLD = KIME_HOLD_BEATS * SECONDS_PER_BEAT;

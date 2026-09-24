@@ -2,8 +2,8 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
-import { POSES } from '../kata-viewer/js/poses.js';
-import { buildTimeline } from '../kata-viewer/js/player.js';
+import { POSES } from '../public/js/poses.js';
+import { buildTimeline } from '../public/js/player.js';
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..');
 export const KATA_FILES = ['seisan.json', 'seiunchin.json', 'naihanchi.json', 'wansu.json', 'chinto.json'];
@@ -17,7 +17,7 @@ const EASES = ['kime', 'soft', 'pass'];
 const LOOKS = ['left', 'right', 'none'];
 
 export function loadKata(file) {
-  return JSON.parse(readFileSync(join(ROOT, 'kata-viewer', 'data', file), 'utf8'));
+  return JSON.parse(readFileSync(join(ROOT, 'public', 'data', file), 'utf8'));
 }
 
 export function validateKata(kata, file) {

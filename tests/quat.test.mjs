@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 // The vendored three.js is the reference implementation. Tests may import it
 // directly; the pure modules under test must not.
-import * as THREE from '../kata-viewer/lib/three/three.module.js';
-import { eulerXYZToQuat, slerp, quatToEulerXYZ } from '../kata-viewer/js/quat.js';
+import * as THREE from '../public/lib/three/three.module.js';
+import { eulerXYZToQuat, slerp, quatToEulerXYZ } from '../public/js/quat.js';
 
 const near = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
 function assertQuatNear(q, ref, eps = 1e-9) {

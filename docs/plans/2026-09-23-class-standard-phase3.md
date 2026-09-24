@@ -26,14 +26,22 @@ tools are public, `/` is a 404, the viewer lives at `/kata-viewer/`).
    `node tools/validate-data.mjs` and `node --test tests/*.test.mjs` pass unchanged in
    behaviour.
 2. Next.js shell at the repo root (`package.json` name `katas`, Next 16.3.x, TypeScript,
-   no Tailwind, ESLint with `public/**` ignored as the portal ignores its kit): a root
-   `app/layout.tsx` and `app/not-found.tsx` (the shell has no page of its own);
-   `next.config.ts` with the four security headers on `/(.*)` (rule 2.4) and a rewrite
-   `/` → `/index.html`; `vercel.json` `{ "framework": "nextjs" }` so the Vercel project's
-   "Other" preset is overridden without a dashboard change. Live: `/` serves the viewer
-   (title `Isshin Ryu Kata Viewer`), `/index.html`, `/js/main.js`, `/data/seisan.json`
-   and `/lib/three/three.module.js` answer 200, and `/docs/review-notes.md`,
-   `/tools/validate-data.mjs`, `/tests/player.test.mjs` answer 404.
+   no Tailwind, ESLint with `public/**` ignored as the portal ignores its kit), laid out
+   exactly like Factors: `src/app/layout.tsx` and `src/app/not-found.tsx` (the shell has
+   no page of its own) **beside `src/proxy.ts`**, because Next discovers the proxy file
+   only next to the selected `app` directory (KATAS-P3-001); `next.config.ts` with the
+   four security headers on `/(.*)` (rule 2.4) and a rewrite `/` → `/index.html`;
+   `vercel.json` `{ "framework": "nextjs" }` so the Vercel project's "Other" preset is
+   overridden without a dashboard change. Live, **without a cookie**: `/`, `/index.html`
+   and any non-asset path such as `/docs/review-notes.md`, `/tools/validate-data.mjs`,
+   `/tests/player.test.mjs` answer the gate's 307 to the portal login (the canonical
+   matcher gates every path that is not a listed asset extension, so a repository file
+   is never served anonymously either); `/js/main.js`, `/data/seisan.json`,
+   `/lib/three/three.module.js` and `/css/app.css` answer 200 (assets are not gated).
+   Live, **signed in**: `/` serves the viewer (title `Isshin Ryu Kata Viewer`) and the
+   three repository paths above answer 404 (only `public/` and app routes exist).
+   Locally the same 404s are proved by the e2e (criterion 5b) through the development
+   bypass, where the gate is not in the way.
 3. `src/proxy.ts`, `src/lib/session.ts`, `src/lib/session-cookie.ts` and their tests are
    byte-identical copies of Factors' at `main` (`jose`, `vitest` added); `tests/proxy.test.ts`,
    `tests/session.test.ts`, `tests/next-config.test.ts` run under `vitest`. Live:
@@ -62,6 +70,34 @@ tools are public, `/` is a 404, the viewer lives at `/kata-viewer/`).
    `tests/kit.test.mjs` covers `furthestStepTracker` (first step, higher step, lower or
    equal step, second kata independent). `npm test` runs the data validator, the Node
    tests and `vitest run`; `npm run verify` = typecheck, lint, test.
+5b. **End-to-end script** (rule 4.1, KATAS-P3-003), `scripts/e2e.ts` run with `tsx` and
+   Playwright Chromium like Factors', in two parts. (a) *Shell and gate, production
+   mode:* `next build` then `next start --hostname localhost --port <free port>` with
+   `NODE_ENV=production` (so the localhost bypass does not apply; production mode is what
+   disables it, not the hostname) and `NEXT_PUBLIC_SUPABASE_URL=https://example.supabase.co`
+   (a dummy: cookie-free requests never reach the JWKS, and without any value the
+   canonical missing-configuration branch would answer 500). Plain HTTP requests with
+   redirects disabled assert: `/` → 307 whose `location` is exactly
+   `https://class.travelschooling.com/login?next=` + `encodeURIComponent("http://localhost:<port>/")`
+   (Next builds `request.nextUrl` from its own protocol, hostname and port, which the
+   canonical gate encodes unchanged; the public HTTPS origin is asserted in the live
+   check, not here); `/docs/review-notes.md?x=1` → 307 with the local origin, path and
+   query encoded likewise; `/js/main.js`, `/data/seisan.json`, `/css/app.css` → 200; every
+   response carries the four security headers. This is the HTTP integration check that
+   the proxy is discovered and registered (a unit test importing `src/proxy` cannot prove
+   that).
+   (b) *Viewer and awards, development mode:* `next dev` on `localhost` with
+   `NEXT_PUBLIC_TS_KIT=mock` (the gate bypasses, `initKit()` returns the mock, whose
+   `award` records calls on `window.__kitAwards`): Playwright opens `/`, asserts the
+   title `Isshin Ryu Kata Viewer`, that `#kata-select` has five options and no
+   `#error-banner` is visible, records a `kata_view` award for the first kata, selects a
+   second kata (another `kata_view`), presses "next movement" twice (two `kata_step`
+   awards with increasing `step`), presses it twice more after seeking back (no new
+   `kata_step`), seeks to the end without playing (no `kata_complete`), plays from a
+   point near the end until the player stops (exactly one `kata_complete`), and asserts
+   `/docs/review-notes.md`, `/tools/validate-data.mjs`, `/tests/player.test.mjs` → 404
+   while `/index.html` → 200. `npm run e2e` runs both parts and exits non-zero on any
+   failure; `npx playwright install chromium` is documented as a one-time step.
 6. `.github/workflows/verify.yml` calls
    `XRAI-Studio/travelschooling-portal/.github/workflows/class-verify.yml@main` on push and
    pull request to `master`; the first run is green. `.github/workflows/deploy.yml`
@@ -80,7 +116,11 @@ tools are public, `/` is a 404, the viewer lives at `/kata-viewer/`).
    deployment of `master`, and the later `graphics` push producing only a preview);
    Root Directory `.`. The GitHub Pages site at `xrai-studio.github.io/KATAS` stops
    updating when `deploy.yml` is deleted; disabling it is a follow-up for the user.
-9. Live, signed in as a learner: `https://karate.travelschooling.com/` loads the viewer,
+9. Live, signed in as a learner (this needs a portal session in the checking browser; the
+   host's own session was reset by the portal migration and the host does not enter
+   credentials, so if no session is available at build time these checks are recorded as
+   "awaiting user verification" and performed by the user):
+   `https://karate.travelschooling.com/` loads the viewer,
    selecting a kata produces `POST rpc/award` 200 for `kata_view`, and stepping forward
    produces `kata_step` awards; signed out, the curl redirect in criterion 3.
 
@@ -125,6 +165,8 @@ Horizon; disabling GitHub Pages (user follow-up).
 
 ## Verification
 - `npm run verify` → exit 0; `npm run build` clean with `ƒ Proxy (Middleware)`.
+- `npm run e2e` → PASS (both parts of criterion 5b: the production-mode gate check with
+  the `Host` header, and the development-mode viewer and award check).
 - `gh run list --workflow=verify.yml -L1` → success.
 - `curl -sI https://karate.travelschooling.com/` → 307 + four headers; `/js/main.js` 200;
   `/docs/review-notes.md` 404.

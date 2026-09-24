@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { POSES, composePose, mirrorPose } from '../kata-viewer/js/poses.js';
+import { POSES, composePose, mirrorPose } from '../public/js/poses.js';
 
 test('techniques carry kime metadata; chambers and guards do not', () => {
   for (const n of ['punchMidR', 'blockMidL', 'backfistR', 'frontKickL', 'blockDoubleHigh', 'reinforcedBlockL', 'legLiftR']) {

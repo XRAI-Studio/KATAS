@@ -5,6 +5,7 @@ import { buildTimeline, samplePose, stepAt, Player } from './player.js';
 import { initUI } from './ui.js';
 import { createCoach } from './coach.js';
 import { initBunkai } from './bunkai.js';
+import { initKit, award as kitAward, furthestStepTracker, isDevHost } from './kit.js';
 
 const KATAS = [
   { file: 'seisan.json', displayName: 'Seisan (十三)' },
@@ -13,6 +14,31 @@ const KATAS = [
   { file: 'wansu.json', displayName: 'Wansu (汪楫)' },
   { file: 'chinto.json', displayName: 'Chinto (鎮東)' },
 ];
+
+// Portal kit first (class standard rule 3): no user means the kit has already started
+// the redirect to the portal login; a missing kit script gets a retry control.
+const kitStart = await initKit();
+if (kitStart.kind !== 'ready') {
+  const banner = document.getElementById('error-banner');
+  banner.classList.remove('hidden');
+  if (kitStart.kind === 'redirecting') {
+    banner.textContent = 'Sending you to sign in…';
+  } else {
+    banner.textContent = 'Could not reach the school portal. ';
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.dataset.testid = 'retry-kit';
+    retry.textContent = 'Try again';
+    retry.addEventListener('click', () => location.reload());
+    banner.appendChild(retry);
+  }
+} else {
+  boot(kitStart.kit);
+}
+
+function boot(kit) {
+const stepTracker = furthestStepTracker();
+let currentKata = null;
 
 const canvas = document.getElementById('scene');
 let ctx;
@@ -77,12 +103,18 @@ async function loadKata(file) {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const kata = await res.json();
     timeline = buildTimeline(kata, POSES);
+    const kataId = file.replace(/\.json$/, '');
+    currentKata = kataId;
+    kitAward(kit, 'kata_view', { kata: kataId });
     player = new Player(timeline, {
       onStep: (step) => {
         ui.setStep(step, timeline);
         if (player && player.playing) coach.sayStep(step, player.speed);
+        const index = timeline.steps.indexOf(step);
+        if (index >= 0 && stepTracker.isNewFurthest(kataId, index)) kitAward(kit, 'kata_step', { kata: kataId, step: index });
       },
       onKiai: kiaiEffect,
+      onComplete: () => kitAward(kit, 'kata_complete', { kata: kataId }),
     });
     ui.setTimeline(timeline);
     player.seek(0);
@@ -90,6 +122,11 @@ async function loadKata(file) {
   } catch (e) {
     ui.showError(`Could not load kata file "${file}": ${e.message}. Other katas remain available.`);
   }
+}
+
+if (isDevHost(location.hostname)) {
+  // e2e hook (scripts/e2e.ts): reach the player without going through the UI.
+  window.__katasDev = { player: () => player, seek: (t) => { player.seek(t); applyTime(t); }, kata: () => currentKata };
 }
 
 // Shareable / testable state via URL params: ?kata=chinto&t=30&play=1&bunkai=1&cam=side
@@ -162,3 +199,4 @@ renderer.setAnimationLoop((now) => {
 });
 
 applyUrlParams();
+}

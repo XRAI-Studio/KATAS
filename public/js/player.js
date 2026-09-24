@@ -268,10 +268,12 @@ export function stepAt(timeline, t) {
 }
 
 export class Player {
-  constructor(timeline, { onStep, onKiai } = {}) {
+  constructor(timeline, { onStep, onKiai, onComplete } = {}) {
     this.timeline = timeline;
     this.onStep = onStep || (() => {});
     this.onKiai = onKiai || (() => {});
+    // Fires once per play-through, when playback (not a seek) reaches the end.
+    this.onComplete = onComplete || (() => {});
     this._time = 0;
     this._speed = 1;
     this._playing = false;
@@ -321,6 +323,7 @@ export class Player {
       if (this._time >= this.timeline.duration) {
         this._time = this.timeline.duration;
         this._playing = false;
+        this.onComplete();
       }
       if (this._time < 0) this._time = 0;
       this._notifyStep(true);

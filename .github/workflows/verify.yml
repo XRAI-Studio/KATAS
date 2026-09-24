@@ -1,0 +1,14 @@
+name: verify
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    uses: XRAI-Studio/travelschooling-portal/.github/workflows/class-verify.yml@main

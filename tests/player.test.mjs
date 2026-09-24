@@ -3,10 +3,10 @@ import assert from 'node:assert/strict';
 import {
   buildTimeline, samplePose, stepAt, Player, SECONDS_PER_BEAT,
   buildClip, sampleClip, KIME_HOLD_BEATS, LOOK_YAW,
-} from '../kata-viewer/js/player.js';
-import { POSES } from '../kata-viewer/js/poses.js';
-import { eulerXYZToQuat, quatToEulerXYZ } from '../kata-viewer/js/quat.js';
-import { footSoleY } from '../kata-viewer/js/rig.js';
+} from '../public/js/player.js';
+import { POSES } from '../public/js/poses.js';
+import { eulerXYZToQuat, quatToEulerXYZ } from '../public/js/quat.js';
+import { footSoleY } from '../public/js/rig.js';
 
 const near = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
 function assertQuatNear(q, ref, eps = 1e-9) {
@@ -424,4 +424,30 @@ test('the bunkai attacker clip is clamped too', () => {
     { time: 1, parts: ['seisanDachiR', 'punchMidR'] },
   ], POSES, { hold: 0.1 });
   for (const u of [0, 0.3, 0.6, 1]) assert.ok(Math.abs(footSoleY(sampleClip(clip, u))) < 1e-9, "u=" + u);
+});
+
+test('onComplete fires once when playback reaches the end, not on a seek to the end', () => {
+  const timeline = buildTimeline(kata, POSES);
+  let completed = 0;
+  const player = new Player(timeline, { onComplete: () => { completed++; } });
+  player.seek(timeline.duration);
+  assert.equal(completed, 0, 'a seek to the end is not a play-through');
+  player.seek(0);
+  player.play();
+  player.tick(timeline.duration + 1);
+  assert.equal(completed, 1);
+  assert.equal(player.playing, false);
+  player.tick(1);
+  assert.equal(completed, 1, 'a tick while stopped does not fire again');
+});
+
+test('onComplete fires again on the next play-through', () => {
+  const timeline = buildTimeline(kata, POSES);
+  let completed = 0;
+  const player = new Player(timeline, { onComplete: () => { completed++; } });
+  player.play();
+  player.tick(timeline.duration + 1);
+  player.play(); // replays from the start
+  player.tick(timeline.duration + 1);
+  assert.equal(completed, 2);
 });

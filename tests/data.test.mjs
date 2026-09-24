@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { KATA_FILES, loadKata, validateKata } from '../tools/validate-data.mjs';
-import { POSES } from '../kata-viewer/js/poses.js';
-import { buildTimeline } from '../kata-viewer/js/player.js';
+import { POSES } from '../public/js/poses.js';
+import { buildTimeline } from '../public/js/player.js';
 
 for (const file of KATA_FILES) {
   test(`${file} parses, validates, and builds a timeline`, () => {
@@ -35,8 +35,8 @@ test('validateKata rejects bad ease, hold and look values and accepts good ones'
   assert.deepEqual(validateKata(k, 'x.json'), []);
 });
 
-import { samplePose } from '../kata-viewer/js/player.js';
-import { footSoleY } from '../kata-viewer/js/rig.js';
+import { samplePose } from '../public/js/player.js';
+import { footSoleY } from '../public/js/rig.js';
 
 for (const file of KATA_FILES) {
   test(`${file} samples cleanly at 20 Hz over its whole duration`, () => {

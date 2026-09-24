@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import * as THREE from '../kata-viewer/lib/three/three.module.js';
-import { RIG, footSoleY } from '../kata-viewer/js/rig.js';
-import { POSES, composePose } from '../kata-viewer/js/poses.js';
-import { eulerXYZToQuat, mulQuat, rotateVec } from '../kata-viewer/js/quat.js';
+import * as THREE from '../public/lib/three/three.module.js';
+import { RIG, footSoleY } from '../public/js/rig.js';
+import { POSES, composePose } from '../public/js/poses.js';
+import { eulerXYZToQuat, mulQuat, rotateVec } from '../public/js/quat.js';
 
 const near = (a, b, eps = 1e-9) => Math.abs(a - b) < eps;
 
