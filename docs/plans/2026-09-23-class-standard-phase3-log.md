@@ -134,3 +134,36 @@ KATAS-P3-005..007 not reopened. One finding:
 Inspection budget (2) spent; host decision, following the precedent in the other repos:
 one extra fresh inspection of this small change rather than leaving it unreviewed. Any
 finding it raises is reported to the user, not fixed.
+
+### CI and live evidence
+
+- `verify` (inlined steps): run 35951978923 on `bfdea2c` **success**; run 35952417934 on
+  `93c0681` **success** (criterion 6, with the public-repository exception).
+- Live, without a cookie: `/` → 307 to
+  `https://class.travelschooling.com/login?next=https%3A%2F%2Fkarate.travelschooling.com%2F`
+  with the four headers; `/js/main.js`, `/data/seisan.json`, `/css/app.css`,
+  `/lib/three/three.module.js` → 200; `/docs/review-notes.md`, `/tools/validate-data.mjs`,
+  `/tests/player.test.mjs`, `/kata-viewer/index.html` → 307 to the login with the path in
+  `next=` (criteria 2, 3). Vercel built the Next shell from `vercel.json`'s framework
+  setting on the first push (45 s to live); `/js/kit.js` on the live host carries the
+  account guard after the fix push.
+- Signed-in live check (criterion 9): **awaiting user verification**; the host's browser
+  has no portal session (reset by the portal migration) and the host does not enter
+  credentials. To perform: sign in at the portal, open `https://karate.travelschooling.com/`,
+  pick a kata (a `kata_view` award), press next twice (`kata_step`), and confirm in the
+  portal launcher that the KATAS tile updates.
+
+## Inspection 3 — Codex (APPROVED) — host-authorized extra, final for Phase 3
+
+Runner result: `scratchpad/claudex-runs/claudex-glv8c2us/result.json` (a first attempt,
+`claudex-tqhz7021`, was killed by the host machine for memory pressure before answering),
+fresh session `01a0d182-822b-72c0-ba1c-d9b4eaf8df85`, base `83bcae6`, inspected tree =
+`93c0681`. Usage: 1,817,282 input tokens (1,467,264 cached), 3,222 output. Elapsed 258 s.
+"No material unresolved defects found in the inspected implementation. The e2e cleanup
+now handles Chromium launch failures and browser-close rejections."
+
+**Round accounting, Katas Phase 3:** plan review 3 rounds (approved at
+`a84fd2ac568d349c74def154666ed6ded8e5dfa2e6435c3e08ad0bb74d60a6dd`), fix rounds 2 of 2,
+inspections 3 (2 authorized plus one host-authorized extra). Closed: KATAS-P3-001..008.
+Deviations recorded: step-0 baseline for `kata_step`; inlined CI steps (public repository).
+Open: the signed-in live check (user); disabling the stale GitHub Pages site (user).
