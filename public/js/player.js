@@ -319,11 +319,14 @@ export class Player {
 
   tick(dt) {
     if (this._playing) {
+      const before = this._time;
       this._time += dt * this._speed;
       if (this._time >= this.timeline.duration) {
         this._time = this.timeline.duration;
         this._playing = false;
-        this.onComplete();
+        // A play-through is playback crossing the end from strictly before it. A seek
+        // that landed on the end (scrubbing to the maximum while playing) just stops.
+        if (before < this.timeline.duration) this.onComplete();
       }
       if (this._time < 0) this._time = 0;
       this._notifyStep(true);

@@ -5,7 +5,7 @@
 
 23 steps, 81.00 s at 1.00× (1 beat = 1 s).
 
-Cite any row by pasting `http://localhost:8420/?kata=seisan&t=<time>` — the **t** column is
+Cite any row by pasting `http://localhost:3000/?kata=seisan&t=<time>` — the **t** column is
 exactly what the viewer's `t = … s` readout shows. Playback speed does not change these numbers.
 
 ## Steps

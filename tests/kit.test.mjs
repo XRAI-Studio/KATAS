@@ -1,6 +1,48 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { furthestStepTracker, initKit, isDevHost, mockKit, GAME } from '../public/js/kit.js';
+import { award, furthestStepTracker, initKit, isDevHost, mockKit, sameAccount, sessionUserId, GAME } from '../public/js/kit.js';
+
+function jwt(sub) {
+  const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
+  return `${b64({ alg: 'ES256' })}.${b64({ sub, approved: true })}.sig`;
+}
+function cookieFor(sub) {
+  return 'sb-abc-auth-token=' + encodeURIComponent(JSON.stringify({ access_token: jwt(sub), token_type: 'bearer' }));
+}
+
+test('sessionUserId reads the subject out of the session cookie, chunked or base64-prefixed too', () => {
+  assert.equal(sessionUserId(cookieFor('user-42')), 'user-42');
+  const payload = Buffer.from(JSON.stringify({ access_token: jwt('user-7') })).toString('base64url');
+  const b64 = 'base64-' + payload;
+  const cut = Math.floor(b64.length / 2);
+  assert.equal(sessionUserId(`other=1; sb-abc-auth-token.1=${b64.slice(cut)}; sb-abc-auth-token.0=${b64.slice(0, cut)}`), 'user-7');
+  assert.equal(sessionUserId(null), null);
+  assert.equal(sessionUserId('theme=dark'), null);
+  assert.equal(sessionUserId('sb-abc-auth-token=not-json'), null);
+});
+
+test('sameAccount: the mock kit always matches; a real kit matches only its own subject', () => {
+  assert.equal(sameAccount({ mock: true, user: { id: 'dev' } }, ''), true);
+  const kit = { user: { id: 'user-1' } };
+  assert.equal(sameAccount(kit, cookieFor('user-1')), true);
+  assert.equal(sameAccount(kit, cookieFor('user-2')), false, 'another learner signed in under this tab');
+  assert.equal(sameAccount(kit, ''), false, 'signed out under this tab');
+});
+
+test('award refuses to credit a kit whose learner is no longer the signed-in one, and reports it', async () => {
+  const sent = [];
+  const kit = { user: { id: 'user-1' }, award: async (e, d) => { sent.push([e, d]); return {}; } };
+  let mismatches = 0;
+  const opts = (cookie) => ({ cookie: () => cookie, onMismatch: () => { mismatches++; } });
+  assert.equal(award(kit, 'kata_view', { kata: 'seisan' }, opts(cookieFor('user-1'))), true);
+  await new Promise((r) => setImmediate(r));
+  assert.deepEqual(sent, [['kata_view', { kata: 'seisan' }]]);
+  assert.equal(award(kit, 'kata_step', { kata: 'seisan', step: 1 }, opts(cookieFor('user-2'))), false, 'account switched');
+  assert.equal(award(kit, 'kata_step', { kata: 'seisan', step: 2 }, opts('')), false, 'signed out');
+  await new Promise((r) => setImmediate(r));
+  assert.equal(sent.length, 1, 'nothing sent after the switch');
+  assert.equal(mismatches, 2);
+});
 
 test('furthestStepTracker: first step, higher step, lower or equal step, second kata independent', () => {
   const t = furthestStepTracker();

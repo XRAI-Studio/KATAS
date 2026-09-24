@@ -56,8 +56,10 @@ for this class. The viewer has no quiz or journal yet (quiz content exists on th
 - **DNS:** one record in Hostinger's DNS Zone Editor, `A karate 76.76.21.21`, already in
   place. Never create the subdomain through hPanel's Websites screen and never enable
   Hostinger CDN. `npm run dns:check` in the portal repo verifies all seven hosts.
-- **CI:** `.github/workflows/verify.yml` runs the shared `class-verify` workflow on every
-  push and pull request.
+- **CI:** `.github/workflows/verify.yml` runs the same steps as the shared `class-verify`
+  workflow on every push and pull request, inlined: this repository is public and the
+  portal is private, and GitHub does not let a public repository call a private
+  repository's reusable workflow. Keep the steps in step with `class-verify.yml`.
 
 The old GitHub Pages site (`xrai-studio.github.io/KATAS`) no longer updates; disabling it
 is a follow-up.

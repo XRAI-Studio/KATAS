@@ -19,9 +19,9 @@ Its **Warnings** section already lists real problems: five keyframes that never 
 
 ## Citing a moment
 
-1. `.\serve.ps1` → http://localhost:8420, pick the kata, scrub or pause on the moment.
+1. `npm run dev` → http://localhost:3000, pick the kata, scrub or pause on the moment.
 2. Click **Copy link** in the bottom bar. The link carries the kata, exact time, camera preset and
-   bunkai state, e.g. `http://localhost:8420/?kata=seisan&t=16.60&cam=side`.
+   bunkai state, e.g. `http://localhost:3000/?kata=seisan&t=16.60&cam=side`.
 3. Paste it into a bullet below with *what it should be* (not only what is wrong).
 
 If the **Copy link** button or the `t = … s` readout is missing, hard-refresh once (**Ctrl+F5**) —

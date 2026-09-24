@@ -5,6 +5,9 @@
 //   node tools/timing-map.mjs seisan > docs/seisan-timing.md
 import { POSES } from '../public/js/poses.js';
 import { buildTimeline, SECONDS_PER_BEAT, KIME_HOLD_BEATS } from '../public/js/player.js';
+
+// The local viewer origin used in generated citation links (`npm run dev` serves port 3000).
+const VIEWER_ORIGIN = process.env.KATAS_ORIGIN || 'http://localhost:3000';
 import { loadKata } from './validate-data.mjs';
 
 const DEFAULT_HOLD = KIME_HOLD_BEATS * SECONDS_PER_BEAT;
@@ -71,7 +74,7 @@ function render(name, kata, timeline) {
   L.push('');
   L.push(`${timeline.steps.length} steps, ${s2(timeline.duration)} s at 1.00× (1 beat = ${SECONDS_PER_BEAT} s).`);
   L.push('');
-  L.push(`Cite any row by pasting \`http://localhost:8420/?kata=${name}&t=<time>\` — the **t** column is`);
+  L.push(`Cite any row by pasting \`${VIEWER_ORIGIN}/?kata=${name}&t=<time>\` — the **t** column is`);
   L.push('exactly what the viewer\'s `t = … s` readout shows. Playback speed does not change these numbers.');
   L.push('');
   L.push('## Steps');

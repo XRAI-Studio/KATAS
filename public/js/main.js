@@ -5,7 +5,7 @@ import { buildTimeline, samplePose, stepAt, Player } from './player.js';
 import { initUI } from './ui.js';
 import { createCoach } from './coach.js';
 import { initBunkai } from './bunkai.js';
-import { initKit, award as kitAward, furthestStepTracker, isDevHost } from './kit.js';
+import { initKit, award as kitAward, furthestStepTracker, isDevHost, sameAccount } from './kit.js';
 
 const KATAS = [
   { file: 'seisan.json', displayName: 'Seisan (十三)' },
@@ -39,6 +39,28 @@ if (kitStart.kind !== 'ready') {
 function boot(kit) {
 const stepTracker = furthestStepTracker();
 let currentKata = null;
+
+// The kit captured one learner's token at init. If the portal signs someone else in (or
+// out) under this open tab, stop awarding and reload through the gate so the kit and the
+// step tracker start fresh for whoever is signed in now.
+let restarting = false;
+function restart() {
+  if (restarting) return;
+  restarting = true;
+  const banner = document.getElementById('error-banner');
+  banner.textContent = 'The signed-in account changed. Reloading…';
+  banner.classList.remove('hidden');
+  location.reload();
+}
+function grant(event, detail) {
+  if (restarting) return;
+  kitAward(kit, event, detail, { onMismatch: restart });
+}
+function checkAccount() {
+  if (!sameAccount(kit, document.cookie)) restart();
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') checkAccount(); });
+window.addEventListener('focus', checkAccount);
 
 const canvas = document.getElementById('scene');
 let ctx;
@@ -105,16 +127,16 @@ async function loadKata(file) {
     timeline = buildTimeline(kata, POSES);
     const kataId = file.replace(/\.json$/, '');
     currentKata = kataId;
-    kitAward(kit, 'kata_view', { kata: kataId });
+    grant('kata_view', { kata: kataId });
     player = new Player(timeline, {
       onStep: (step) => {
         ui.setStep(step, timeline);
         if (player && player.playing) coach.sayStep(step, player.speed);
         const index = timeline.steps.indexOf(step);
-        if (index >= 0 && stepTracker.isNewFurthest(kataId, index)) kitAward(kit, 'kata_step', { kata: kataId, step: index });
+        if (index >= 0 && stepTracker.isNewFurthest(kataId, index)) grant('kata_step', { kata: kataId, step: index });
       },
       onKiai: kiaiEffect,
-      onComplete: () => kitAward(kit, 'kata_complete', { kata: kataId }),
+      onComplete: () => grant('kata_complete', { kata: kataId }),
     });
     ui.setTimeline(timeline);
     player.seek(0);

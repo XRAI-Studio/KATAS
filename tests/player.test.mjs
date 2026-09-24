@@ -441,6 +441,20 @@ test('onComplete fires once when playback reaches the end, not on a seek to the 
   assert.equal(completed, 1, 'a tick while stopped does not fire again');
 });
 
+test('onComplete does not fire when a seek during playback lands on the end (scrubbing to the maximum)', () => {
+  const timeline = buildTimeline(kata, POSES);
+  let completed = 0;
+  const player = new Player(timeline, { onComplete: () => { completed++; } });
+  player.play();
+  player.tick(0.5);
+  player.seek(timeline.duration); // the scrubber's input handler while playing
+  assert.equal(player.playing, true, 'seek does not stop playback');
+  player.tick(0.5);
+  assert.equal(completed, 0, 'the end was reached by a seek, not by playback');
+  assert.equal(player.playing, false, 'the player still stops at the end');
+  assert.equal(player.time, timeline.duration);
+});
+
 test('onComplete fires again on the next play-through', () => {
   const timeline = buildTimeline(kata, POSES);
   let completed = 0;

@@ -73,3 +73,45 @@ Proofs: `npm run verify` → typecheck and lint clean, data validator ok, 72 Nod
 (production-mode gate: `/` and `/docs/review-notes.md?x=1` → 307 with the local origin
 encoded, assets 200 with headers; development mode: viewer boot, `kata_view` ×2,
 `kata_step` for 1 and 2 only, `kata_complete` once, repository paths 404).
+
+## Inspection 1 — Codex (REVISE)
+
+Runner result: `scratchpad/claudex-runs/claudex-f3co28eq/result.json`, fresh session
+`01a0d171-e701-7743-b2a3-3aa0e0306001`, base `83bcae6`, inspected tree = `a94db3c`, CLI
+`codex-cli 0.153.4`, requested model: CLI default (`gpt-6-astra` / `high`). Usage:
+2,067,151 input tokens (1,824,384 cached), 4,916 output. Elapsed 203 s. Three findings,
+all accepted (fix round 1 of 2):
+
+- **KATAS-P3-005 (medium)** scrubbing to the maximum while playing seeks to the end with
+  playback still on, and the next `tick` fired `onComplete`. *Fixed:* completion fires only
+  when playback crosses the end from strictly before it; a seek that landed on the end just
+  stops. New player test: play, tick, seek(duration), tick → no completion, still stops.
+- **KATAS-P3-006 (medium)** the kit captures one learner's token at init, so after an
+  account switch in another tab an open viewer credited the previous learner (Word Power
+  guards this). *Fixed:* `kit.js` gains `sessionUserId` (the kit's cookie reader) and
+  `sameAccount`; `award` refuses and reports a mismatch; `main.js` routes every award
+  through a guard that reloads through the gate on mismatch and also checks on
+  `visibilitychange`/`focus`. The mock kit always matches. Tests: cookie parsing (plain,
+  chunked, base64-prefixed, malformed), `sameAccount`, and `award` refusing after a switch
+  or sign-out.
+- **KATAS-P3-007 (low)** `tools/timing-map.mjs` and two docs still cited
+  `http://localhost:8420` (the deleted `serve.ps1`). *Fixed:* `KATAS_ORIGIN` with
+  `http://localhost:3000` as the default; docs updated.
+
+### CI on `a94db3c`: failure, and a documented exception to rule 4.2
+
+`verify` run 35951318274 failed before any job started ("workflow file issue"). Cause:
+`XRAI-Studio/KATAS` is **public** and `travelschooling-portal` is **private**; GitHub does
+not allow a public repository to call a private repository's reusable workflow (Factors
+and Word Power are private, which is why their callers worked). Fix: the same four steps
+(checkout, setup-node 24 with npm cache, `npm ci`, `npm run verify`) are inlined in
+`.github/workflows/verify.yml` with a comment naming the reason and the file to keep in
+step with. Recorded as a deviation from criterion 6 and rule 4.2 for public class
+repositories; Word Forge (also public) will need the same. Alternative for the user:
+make the repository private, after which the caller form works again.
+
+### Fix round 1 proofs
+
+`npm run verify` → typecheck and lint clean, data validator ok, 76 Node tests (was 72),
+24 vitest tests; `npm run e2e` PASS (both parts). Sent for inspection 2 (the last of the
+two authorized).
