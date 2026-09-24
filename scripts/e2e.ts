@@ -148,9 +148,10 @@ async function viewerInDevelopmentMode() {
   const port = await freePort();
   const base = `http://localhost:${port}`;
   const server = startNext(["dev", "-p", String(port)], { NEXT_PUBLIC_TS_KIT: "mock", NODE_ENV: "development" });
-  const browser = await chromium.launch();
+  let browser: Awaited<ReturnType<typeof chromium.launch>> | null = null;
   try {
     await waitForServer(base, 90_000);
+    browser = await chromium.launch(); // inside the server's try so a launch failure still stops Next
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
@@ -212,8 +213,13 @@ async function viewerInDevelopmentMode() {
     expectEq((await fetch(`${base}/index.html`, { redirect: "manual" })).status, 200, "GET /index.html");
     log("dev: repository paths are 404, the viewer page is 200");
   } finally {
-    await browser.close();
-    stopServer(server, port);
+    // Nested so the dev server is stopped even when the browser never launched or
+    // refuses to close.
+    try {
+      if (browser) await browser.close();
+    } finally {
+      stopServer(server, port);
+    }
   }
 }
 

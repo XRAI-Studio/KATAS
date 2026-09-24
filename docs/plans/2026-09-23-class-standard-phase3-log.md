@@ -115,3 +115,22 @@ make the repository private, after which the caller form works again.
 `npm run verify` → typecheck and lint clean, data validator ok, 76 Node tests (was 72),
 24 vitest tests; `npm run e2e` PASS (both parts). Sent for inspection 2 (the last of the
 two authorized).
+
+## Inspection 2 — Codex (REVISE, one low finding)
+
+Runner result: `scratchpad/claudex-runs/claudex-16bg01fx/result.json`, fresh session
+`01a0d17a-28fa-75d1-b1fd-bf1f69c8132a`, base `83bcae6`, inspected tree = the fix-round-1
+commit, CLI `codex-cli 0.153.4`, requested model: CLI default (`gpt-6-astra` / `high`).
+Usage: 2,347,775 input tokens (1,957,760 cached), 3,929 output. Elapsed 283 s. "No
+additional material defects found in the shell, session gate, or award integration."
+KATAS-P3-005..007 not reopened. One finding:
+
+- **KATAS-P3-008 (low)** in `scripts/e2e.ts` the browser launched outside the dev
+  server's `try/finally`, so a Chromium launch failure (or a `browser.close()` rejection)
+  could leave `next dev` running. *Fixed (fix round 2 of 2):* the launch moved inside the
+  `try`, the browser reference is optional, and the cleanup is nested so `stopServer`
+  always runs.
+
+Inspection budget (2) spent; host decision, following the precedent in the other repos:
+one extra fresh inspection of this small change rather than leaving it unreviewed. Any
+finding it raises is reported to the user, not fixed.
