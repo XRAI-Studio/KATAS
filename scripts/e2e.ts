@@ -8,7 +8,8 @@
  *      This proves the proxy is discovered and registered by Next.
  *  (b) Viewer and awards, development mode: `next dev` on localhost with the mock kit.
  *      Playwright drives the viewer through its DOM controls and checks the awards the
- *      mock recorded on window.__kitAwards, plus the 404s for repository paths.
+ *      mock recorded on window.__kitAwards, plus the 404s for repository paths, and
+ *      finally presses "Return to Home Room" (the portal launcher URL is intercepted).
  *
  *   npm run e2e            (needs `npx playwright install chromium` once)
  */
@@ -17,6 +18,7 @@ import net from "node:net";
 import { chromium, type Page } from "playwright";
 
 const PORTAL_LOGIN = "https://class.travelschooling.com/login?next=";
+const HOME_ROOM = "https://class.travelschooling.com/";
 const HEADERS: Record<string, string> = {
   "x-content-type-options": "nosniff",
   "referrer-policy": "strict-origin-when-cross-origin",
@@ -205,6 +207,17 @@ async function viewerInDevelopmentMode() {
     log("dev: kata_complete exactly once when playback reaches the end");
 
     expectEq(errors.length, 0, `page errors: ${errors.join(" | ")}`);
+
+    // Return to Home Room: last, because it leaves the viewer. Only the launcher URL
+    // itself is intercepted; the kit script is served from the same origin.
+    const homeRoom = page.getByRole("button", { name: "Return to Home Room" });
+    expectEq(await homeRoom.isVisible(), true, "Return to Home Room button visible");
+    await page.route(HOME_ROOM, (route) =>
+      route.fulfill({ status: 200, contentType: "text/html", body: "<!doctype html><title>Home Room</title>" }),
+    );
+    await Promise.all([page.waitForURL(HOME_ROOM, { timeout: 10_000 }), homeRoom.click()]);
+    expectEq(page.url(), HOME_ROOM, "Return to Home Room destination");
+    log("dev: Return to Home Room is visible and navigates to the portal launcher");
 
     for (const p of ["/docs/review-notes.md", "/tools/validate-data.mjs", "/tests/player.test.mjs"]) {
       const res = await fetch(base + p, { redirect: "manual" });

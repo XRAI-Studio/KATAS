@@ -85,21 +85,62 @@ export function sameAccount(kit, cookieHeader) {
   return sessionUserId(cookieHeader) === kit.user.id;
 }
 
+// Award calls still in flight, so "Return to Home Room" can wait for them before leaving.
+const pendingAwards = new Set();
+
 /**
  * Fire-and-forget award, refused when the signed-in account changed under this tab
  * (the kit would credit the previous learner). `onMismatch` lets the page reload through
  * the gate so the kit and the step tracker start fresh. The portal caps XP per event and
- * per day, so a lost call costs nothing.
+ * per day, so a lost call costs nothing. The call is tracked until it settles
+ * (see flushAwards).
  */
 export function award(kit, event, detail, { cookie = () => document.cookie, onMismatch = () => {} } = {}) {
   if (!sameAccount(kit, cookie())) {
     onMismatch();
     return false;
   }
-  Promise.resolve()
+  const call = Promise.resolve()
     .then(() => kit.award(event, detail))
-    .catch((err) => console.warn(`[kit] award ${event} failed:`, err && err.message ? err.message : err));
+    .catch((err) => console.warn(`[kit] award ${event} failed:`, err && err.message ? err.message : err))
+    .finally(() => pendingAwards.delete(call));
+  pendingAwards.add(call);
   return true;
+}
+
+/** Number of award calls not yet settled. */
+export function pendingAwardCount() {
+  return pendingAwards.size;
+}
+
+/**
+ * Resolves true once every award in flight now has settled, or false after `timeoutMs`
+ * if some are still pending (awards are best-effort; leaving must not hang).
+ */
+export function flushAwards(timeoutMs = 2000) {
+  if (pendingAwards.size === 0) return Promise.resolve(true);
+  let timer;
+  const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve(false), timeoutMs); });
+  return Promise.race([Promise.all([...pendingAwards]).then(() => true), timeout])
+    .finally(() => clearTimeout(timer));
+}
+
+/** The Home Room: the portal's class launcher. */
+export const HOME_ROOM_URL = 'https://class.travelschooling.com/';
+
+/**
+ * "Return to Home Room": wait (bounded) for awards in flight, then navigate to the
+ * portal launcher. Nothing in the viewer is learner-authored work, so there is no leave
+ * prompt. Returns the click handler; repeated presses while leaving are ignored.
+ */
+export function homeRoomHandler({ flush = flushAwards, assign = (url) => window.location.assign(url), timeoutMs = 2000 } = {}) {
+  let leaving = false;
+  return async () => {
+    if (leaving) return;
+    leaving = true;
+    await flush(timeoutMs);
+    assign(HOME_ROOM_URL);
+  };
 }
 
 /**

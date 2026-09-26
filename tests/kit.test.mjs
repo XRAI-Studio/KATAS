@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { award, furthestStepTracker, initKit, isDevHost, mockKit, sameAccount, sessionUserId, GAME } from '../public/js/kit.js';
+import { award, flushAwards, furthestStepTracker, homeRoomHandler, HOME_ROOM_URL, initKit, isDevHost, mockKit, pendingAwardCount, sameAccount, sessionUserId, GAME } from '../public/js/kit.js';
 
 function jwt(sub) {
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -91,4 +91,83 @@ test('mockKit records awards on the given window object', async () => {
   await kit.award('kata_complete', { kata: 'seisan' });
   assert.equal(win.__kitAwards.length, 2);
   assert.equal(kit.user.id, 'dev');
+});
+
+function deferred() {
+  let resolve, reject;
+  const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+  return { promise, resolve, reject };
+}
+const tick = () => new Promise((r) => setImmediate(r));
+const mock = (awardFn) => ({ mock: true, user: { id: 'dev' }, award: awardFn });
+const NO_COOKIE = { cookie: () => '' };
+
+test('flushAwards resolves at once when no award is in flight', async () => {
+  assert.equal(pendingAwardCount(), 0);
+  const started = Date.now();
+  assert.equal(await flushAwards(1000), true);
+  assert.ok(Date.now() - started < 500);
+});
+
+test('awards in flight are tracked until they settle, rejected ones included; flushAwards waits for all', async () => {
+  const first = deferred();
+  const second = deferred();
+  const calls = [first, second];
+  const kit = mock(() => calls.shift().promise);
+  const warn = console.warn;
+  console.warn = () => {};
+  try {
+    assert.equal(award(kit, 'kata_view', { kata: 'seisan' }, NO_COOKIE), true);
+    assert.equal(award(kit, 'kata_step', { kata: 'seisan', step: 1 }, NO_COOKIE), true);
+    assert.equal(pendingAwardCount(), 2);
+    let flushed = null;
+    const flush = flushAwards(5000).then((v) => { flushed = v; });
+    first.resolve({});
+    await tick();
+    assert.equal(pendingAwardCount(), 1, 'the settled award left the set');
+    assert.equal(flushed, null, 'still waiting for the second award');
+    second.reject(new Error('network down'));
+    await flush;
+    assert.equal(flushed, true);
+    assert.equal(pendingAwardCount(), 0, 'a failed award is removed too');
+  } finally {
+    console.warn = warn;
+  }
+});
+
+test('flushAwards gives up after its timeout and reports false; the award stays tracked until it settles', async () => {
+  const slow = deferred();
+  award(mock(() => slow.promise), 'kata_complete', { kata: 'chinto' }, NO_COOKIE);
+  await tick();
+  assert.equal(pendingAwardCount(), 1);
+  const started = Date.now();
+  assert.equal(await flushAwards(40), false);
+  assert.ok(Date.now() - started >= 30, 'waited for the timeout');
+  assert.equal(pendingAwardCount(), 1);
+  slow.resolve({});
+  await tick();
+  assert.equal(pendingAwardCount(), 0);
+});
+
+test('a refused award (account switched) is not tracked', () => {
+  const kit = { user: { id: 'user-1' }, award: async () => ({}) };
+  assert.equal(award(kit, 'kata_view', { kata: 'seisan' }, { cookie: () => cookieFor('user-2') }), false);
+  assert.equal(pendingAwardCount(), 0);
+});
+
+test('homeRoomHandler flushes awards with a 2 s bound, then goes to the Home Room once', async () => {
+  const order = [];
+  const flushGate = deferred();
+  const onClick = homeRoomHandler({
+    flush: (ms) => { order.push(['flush', ms]); return flushGate.promise; },
+    assign: (url) => order.push(['assign', url]),
+  });
+  const pressed = onClick();
+  onClick(); // a second press while leaving is ignored
+  await tick();
+  assert.deepEqual(order, [['flush', 2000]], 'no navigation before the flush settles');
+  flushGate.resolve(false); // even a timed-out flush leaves
+  await pressed;
+  assert.deepEqual(order, [['flush', 2000], ['assign', 'https://class.travelschooling.com/']]);
+  assert.equal(HOME_ROOM_URL, 'https://class.travelschooling.com/');
 });

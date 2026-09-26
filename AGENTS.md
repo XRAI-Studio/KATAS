@@ -10,8 +10,9 @@ Rules:
   viewer.
 - `src/proxy.ts`, `src/lib/session.ts` and `src/lib/session-cookie.ts` are byte-identical
   to Factors' (the canonical copies); change them there first, then copy.
-- Kit hooks live only in `public/js/kit.js`, the `initKit()` start of `main.js`, the three
-  `award` calls and the `Player` `onComplete` option. Award only events present in the
+- Kit hooks live only in `public/js/kit.js`, the `initKit()` start of `main.js` (with the
+  "Return to Home Room" wiring just above it), the three `award` calls and the `Player`
+  `onComplete` option. Award only events present in the
   portal seed's `xp_events` for `katas`.
 - `NEXT_PUBLIC_TS_KIT` is never set on Vercel; `NEXT_PUBLIC_SUPABASE_URL` must be.
 - `master` is production. `graphics` is an unmerged product branch; do not merge it as
