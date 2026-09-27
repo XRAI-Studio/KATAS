@@ -114,30 +114,47 @@ export function pendingAwardCount() {
 }
 
 /**
- * Resolves true once every award in flight now has settled, or false after `timeoutMs`
- * if some are still pending (awards are best-effort; leaving must not hang).
+ * Resolves true once no award is in flight, or false after `timeoutMs` if some still are
+ * (awards are best-effort; leaving must not hang). Awards started during the wait (the
+ * player may still be crossing steps) are waited for too, under the same deadline.
  */
 export function flushAwards(timeoutMs = 2000) {
   if (pendingAwards.size === 0) return Promise.resolve(true);
   let timer;
-  const timeout = new Promise((resolve) => { timer = setTimeout(() => resolve(false), timeoutMs); });
-  return Promise.race([Promise.all([...pendingAwards]).then(() => true), timeout])
-    .finally(() => clearTimeout(timer));
+  let expired = false;
+  const timeout = new Promise((resolve) => {
+    timer = setTimeout(() => { expired = true; resolve(false); }, timeoutMs);
+  });
+  const drain = async () => {
+    while (pendingAwards.size > 0 && !expired) await Promise.all([...pendingAwards]);
+    return !expired;
+  };
+  return Promise.race([drain(), timeout]).finally(() => clearTimeout(timer));
 }
 
 /** The Home Room: the portal's class launcher. */
 export const HOME_ROOM_URL = 'https://class.travelschooling.com/';
 
 /**
- * "Return to Home Room": wait (bounded) for awards in flight, then navigate to the
- * portal launcher. Nothing in the viewer is learner-authored work, so there is no leave
- * prompt. Returns the click handler; repeated presses while leaving are ignored.
+ * "Return to Home Room": `beforeLeave` (stop playback, so no new awards start), then wait
+ * (bounded) for awards in flight, then navigate to the portal launcher. Nothing in the
+ * viewer is learner-authored work, so there is no leave prompt. Returns the click
+ * handler; presses during a departure are ignored, and a page restored from the
+ * back/forward cache gets a working button again.
  */
-export function homeRoomHandler({ flush = flushAwards, assign = (url) => window.location.assign(url), timeoutMs = 2000 } = {}) {
+export function homeRoomHandler({
+  flush = flushAwards,
+  assign = (url) => window.location.assign(url),
+  beforeLeave = () => {},
+  win = globalThis,
+  timeoutMs = 2000,
+} = {}) {
   let leaving = false;
+  win.addEventListener?.('pageshow', (e) => { if (e.persisted) leaving = false; });
   return async () => {
     if (leaving) return;
     leaving = true;
+    try { beforeLeave(); } catch { /* leaving matters more than pausing */ }
     await flush(timeoutMs);
     assign(HOME_ROOM_URL);
   };

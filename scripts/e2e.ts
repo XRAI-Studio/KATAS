@@ -219,6 +219,16 @@ async function viewerInDevelopmentMode() {
     expectEq(page.url(), HOME_ROOM, "Return to Home Room destination");
     log("dev: Return to Home Room is visible and navigates to the portal launcher");
 
+    // Back to the viewer (restored from the back/forward cache or reloaded), then the
+    // keyboard: Space on the focused button activates it rather than toggling playback.
+    await page.goBack({ waitUntil: "load" });
+    await page.waitForFunction(() => document.querySelectorAll("#kata-select option").length === 5, null, { timeout: 30_000 });
+    await homeRoom.focus();
+    await Promise.all([page.waitForURL(HOME_ROOM, { timeout: 10_000 }), page.keyboard.press("Space")]);
+    expectEq(page.url(), HOME_ROOM, "Return to Home Room by keyboard after Back");
+    expectEq(errors.length, 0, `page errors after Back: ${errors.join(" | ")}`);
+    log("dev: after Back, Space on the focused button returns to the Home Room again");
+
     for (const p of ["/docs/review-notes.md", "/tools/validate-data.mjs", "/tests/player.test.mjs"]) {
       const res = await fetch(base + p, { redirect: "manual" });
       expectEq(res.status, 404, `GET ${p} (dev, gate bypassed)`);

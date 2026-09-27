@@ -17,8 +17,9 @@ const KATAS = [
 
 // "Return to Home Room" works on every screen (including the sign-in and error banners),
 // so it is wired before the kit starts: it waits up to 2 s for awards in flight, then
-// navigates to the portal launcher.
-document.getElementById('home-room').addEventListener('click', homeRoomHandler());
+// navigates to the portal launcher. Playback stops first so no new awards start.
+let pauseForLeave = () => {};
+document.getElementById('home-room').addEventListener('click', homeRoomHandler({ beforeLeave: () => pauseForLeave() }));
 
 // Portal kit first (class standard rule 3): no user means the kit has already started
 // the redirect to the portal login; a missing kit script gets a retry control.
@@ -87,6 +88,7 @@ const bunkai = initBunkai(scene);
 
 let timeline = null;
 let player = null;
+pauseForLeave = () => player?.pause();
 
 let lastPreset = null;
 const ui = initUI({

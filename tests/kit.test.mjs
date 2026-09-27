@@ -171,3 +171,66 @@ test('homeRoomHandler flushes awards with a 2 s bound, then goes to the Home Roo
   assert.deepEqual(order, [['flush', 2000], ['assign', 'https://class.travelschooling.com/']]);
   assert.equal(HOME_ROOM_URL, 'https://class.travelschooling.com/');
 });
+
+test('flushAwards also waits for an award started while it is already waiting, under one deadline', async () => {
+  const first = deferred();
+  const later = deferred();
+  award(mock(() => first.promise), 'kata_step', { kata: 'wansu', step: 1 }, NO_COOKIE);
+  let flushed = null;
+  const flush = flushAwards(5000).then((v) => { flushed = v; });
+  await tick();
+  // Playback crosses another step during the wait.
+  award(mock(() => later.promise), 'kata_step', { kata: 'wansu', step: 2 }, NO_COOKIE);
+  first.resolve({});
+  await tick();
+  await tick();
+  assert.equal(flushed, null, 'the newer award is still in flight, so the flush keeps waiting');
+  assert.equal(pendingAwardCount(), 1);
+  later.resolve({});
+  await flush;
+  assert.equal(flushed, true);
+  assert.equal(pendingAwardCount(), 0);
+
+  // The deadline is shared: a chain of awards cannot stretch it.
+  const a = deferred();
+  const b = deferred();
+  award(mock(() => a.promise), 'kata_step', { kata: 'wansu', step: 3 }, NO_COOKIE);
+  const started = Date.now();
+  const bounded = flushAwards(60);
+  setTimeout(() => { award(mock(() => b.promise), 'kata_step', { kata: 'wansu', step: 4 }, NO_COOKIE); a.resolve({}); }, 30);
+  assert.equal(await bounded, false);
+  const waited = Date.now() - started;
+  assert.ok(waited >= 50 && waited < 1000, `gave up at the one deadline (${waited} ms)`);
+  b.resolve({});
+  await tick();
+  assert.equal(pendingAwardCount(), 0);
+});
+
+test('homeRoomHandler stops playback before flushing', async () => {
+  const order = [];
+  const onClick = homeRoomHandler({
+    beforeLeave: () => order.push('pause'),
+    flush: async () => { order.push('flush'); return true; },
+    assign: () => order.push('assign'),
+    win: {},
+  });
+  await onClick();
+  assert.deepEqual(order, ['pause', 'flush', 'assign']);
+});
+
+test('homeRoomHandler works again after the page comes back from the back/forward cache', async () => {
+  const win = new EventTarget();
+  const pageshow = (persisted) => Object.assign(new Event('pageshow'), { persisted });
+  const assigned = [];
+  const onClick = homeRoomHandler({ flush: async () => true, assign: (url) => assigned.push(url), win });
+  await onClick();
+  assert.equal(assigned.length, 1);
+  await onClick();
+  assert.equal(assigned.length, 1, 'still departing: a second press is ignored');
+  win.dispatchEvent(pageshow(false));
+  await onClick();
+  assert.equal(assigned.length, 1, 'an ordinary pageshow (fresh load) does not reset the latch');
+  win.dispatchEvent(pageshow(true)); // browser Back restored this page from the bfcache
+  await onClick();
+  assert.deepEqual(assigned, [HOME_ROOM_URL, HOME_ROOM_URL]);
+});

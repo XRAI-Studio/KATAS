@@ -2,6 +2,22 @@
 
 const $ = (id) => document.getElementById(id);
 
+const OWN_SPACE = new Set(['BUTTON', 'SELECT', 'TEXTAREA', 'A', 'SUMMARY']);
+
+/**
+ * Whether Space on this focused element is the play/pause shortcut. Buttons, selects,
+ * links and text fields keep Space's native action (activating "Return to Home Room",
+ * for one); the page and the range sliders use it for play/pause.
+ */
+export function spaceTogglesPlayback(target) {
+  if (!target || typeof target.tagName !== 'string') return true;
+  if (target.isContentEditable) return false;
+  const tag = target.tagName.toUpperCase();
+  if (OWN_SPACE.has(tag)) return false;
+  if (tag === 'INPUT') return target.type === 'range';
+  return true;
+}
+
 export function initUI({ katas, onKataChange, onPreset, getPlayer }) {
   const kataSelect = $('kata-select');
   const btnPlay = $('btn-play');
@@ -44,7 +60,11 @@ export function initUI({ katas, onKataChange, onPreset, getPlayer }) {
 
   window.addEventListener('keydown', (e) => {
     if (e.target.tagName === 'INPUT' && e.target.type !== 'range') return;
-    if (e.code === 'Space') { e.preventDefault(); getPlayer()?.toggle(); }
+    if (e.code === 'Space') {
+      if (!spaceTogglesPlayback(e.target)) return; // a focused button/select keeps its own Space
+      e.preventDefault();
+      getPlayer()?.toggle();
+    }
     else if (e.key === 'ArrowLeft') getPlayer()?.prevStep();
     else if (e.key === 'ArrowRight') getPlayer()?.nextStep();
   });
