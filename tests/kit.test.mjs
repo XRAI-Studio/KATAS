@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { award, flushAwards, furthestStepTracker, homeRoomHandler, HOME_ROOM_URL, initKit, isDevHost, mockKit, pendingAwardCount, sameAccount, sessionUserId, GAME } from '../public/js/kit.js';
+import { award, flushAwards, furthestStepTracker, homeRoomHandler, HOME_ROOM_URL, initKit, isDevHost, mockKit, pendingAwardCount, sameAccount, sessionUserId, trackPending, GAME } from '../public/js/kit.js';
 
 function jwt(sub) {
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -101,6 +101,7 @@ function deferred() {
 const tick = () => new Promise((r) => setImmediate(r));
 const mock = (awardFn) => ({ mock: true, user: { id: 'dev' }, award: awardFn });
 const NO_COOKIE = { cookie: () => '' };
+const NO_TIMER = () => {};
 
 test('flushAwards resolves at once when no award is in flight', async () => {
   assert.equal(pendingAwardCount(), 0);
@@ -158,7 +159,7 @@ test('a refused award (account switched) is not tracked', () => {
 test('homeRoomHandler flushes awards with a 2 s bound, then goes to the Home Room once', async () => {
   const order = [];
   const flushGate = deferred();
-  const onClick = homeRoomHandler({
+  const onClick = homeRoomHandler({ setTimer: NO_TIMER,
     flush: (ms) => { order.push(['flush', ms]); return flushGate.promise; },
     assign: (url) => order.push(['assign', url]),
   });
@@ -208,7 +209,7 @@ test('flushAwards also waits for an award started while it is already waiting, u
 
 test('homeRoomHandler stops playback before flushing', async () => {
   const order = [];
-  const onClick = homeRoomHandler({
+  const onClick = homeRoomHandler({ setTimer: NO_TIMER,
     beforeLeave: () => order.push('pause'),
     flush: async () => { order.push('flush'); return true; },
     assign: () => order.push('assign'),
@@ -222,7 +223,7 @@ test('homeRoomHandler works again after the page comes back from the back/forwar
   const win = new EventTarget();
   const pageshow = (persisted) => Object.assign(new Event('pageshow'), { persisted });
   const assigned = [];
-  const onClick = homeRoomHandler({ flush: async () => true, assign: (url) => assigned.push(url), win });
+  const onClick = homeRoomHandler({ setTimer: NO_TIMER, flush: async () => true, assign: (url) => assigned.push(url), win });
   await onClick();
   assert.equal(assigned.length, 1);
   await onClick();
@@ -233,4 +234,81 @@ test('homeRoomHandler works again after the page comes back from the back/forwar
   win.dispatchEvent(pageshow(true)); // browser Back restored this page from the bfcache
   await onClick();
   assert.deepEqual(assigned, [HOME_ROOM_URL, HOME_ROOM_URL]);
+});
+
+/** A manual timer: `fire()` runs what was scheduled, as if its delay had passed. */
+function manualTimer() {
+  const due = [];
+  return { setTimer: (fn, ms) => { due.push({ fn, ms }); }, due, fire: () => { for (const t of due.splice(0)) t.fn(); } };
+}
+
+test('leaving during a slow kit start-up waits for it (it replays queued awards) and never boots the viewer', async () => {
+  const init = deferred();
+  const initDone = trackPending(init.promise); // main.js: trackPending(initKit())
+  const assigned = [];
+  const timer = manualTimer();
+  const onClick = homeRoomHandler({ flush: flushAwards, assign: (url) => assigned.push(url), win: {}, setTimer: timer.setTimer });
+  const pressed = onClick();
+  await tick();
+  assert.deepEqual(assigned, [], 'the kit is still starting: no navigation yet');
+  init.resolve({ kind: 'ready', kit: {} });
+  const booted = [];
+  onClick.whenStaying(() => booted.push('boot'));
+  await initDone;
+  await pressed;
+  assert.deepEqual(assigned, [HOME_ROOM_URL], 'navigated once the start-up settled');
+  assert.deepEqual(booted, [], 'no boot while leaving');
+  assert.equal(pendingAwardCount(), 0);
+});
+
+test('a start-up slower than the deadline does not hold the learner past it', async () => {
+  const init = deferred();
+  trackPending(init.promise);
+  const assigned = [];
+  const started = Date.now();
+  const onClick = homeRoomHandler({ assign: (url) => assigned.push(url), win: {}, setTimer: NO_TIMER, timeoutMs: 40 });
+  await onClick();
+  const waited = Date.now() - started;
+  assert.deepEqual(assigned, [HOME_ROOM_URL]);
+  assert.ok(waited >= 30 && waited < 1000, `left at the deadline (${waited} ms)`);
+  init.reject(new Error('portal down')); // a failed start-up is tracked without an unhandled rejection
+  await tick();
+  assert.equal(pendingAwardCount(), 0);
+});
+
+test('a navigation that does not unload (browser Stop) ends the departure: the button works again and a held boot runs', async () => {
+  const assigned = [];
+  const timer = manualTimer();
+  const onClick = homeRoomHandler({ flush: async () => true, assign: (url) => assigned.push(url), win: {}, setTimer: timer.setTimer });
+  await onClick();
+  assert.equal(assigned.length, 1);
+  assert.equal(timer.due[0].ms, 3000, 'the document gets 3 s to unload');
+  const booted = [];
+  onClick.whenStaying(() => booted.push('boot'));
+  await onClick();
+  assert.equal(assigned.length, 1, 'a press while the navigation may still happen is ignored');
+  assert.deepEqual(booted, []);
+  timer.fire(); // still here: the navigation was cancelled
+  assert.equal(onClick.isLeaving(), false);
+  assert.deepEqual(booted, ['boot'], 'the viewer starts after all');
+  await onClick();
+  assert.equal(assigned.length, 2, 'the button works again');
+  onClick.whenStaying(() => booted.push('now'));
+  assert.deepEqual(booted, ['boot'], 'held again during the new departure');
+});
+
+test('a stale "still here" timer from an earlier departure does not end a newer one', async () => {
+  const win = new EventTarget();
+  const assigned = [];
+  const timer = manualTimer();
+  const onClick = homeRoomHandler({ flush: async () => true, assign: (url) => assigned.push(url), win, setTimer: timer.setTimer });
+  await onClick();
+  const stale = timer.due.splice(0);
+  win.dispatchEvent(Object.assign(new Event('pageshow'), { persisted: true })); // Back from bfcache
+  await onClick();
+  assert.equal(assigned.length, 2);
+  for (const t of stale) t.fn(); // the first departure's timer fires late
+  assert.equal(onClick.isLeaving(), true, 'the second departure is still active');
+  await onClick();
+  assert.equal(assigned.length, 2);
 });

@@ -5,7 +5,7 @@ import { buildTimeline, samplePose, stepAt, Player } from './player.js';
 import { initUI } from './ui.js';
 import { createCoach } from './coach.js';
 import { initBunkai } from './bunkai.js';
-import { initKit, award as kitAward, furthestStepTracker, homeRoomHandler, isDevHost, sameAccount } from './kit.js';
+import { initKit, award as kitAward, furthestStepTracker, homeRoomHandler, isDevHost, sameAccount, trackPending } from './kit.js';
 
 const KATAS = [
   { file: 'seisan.json', displayName: 'Seisan (十三)' },
@@ -19,11 +19,17 @@ const KATAS = [
 // so it is wired before the kit starts: it waits up to 2 s for awards in flight, then
 // navigates to the portal launcher. Playback stops first so no new awards start.
 let pauseForLeave = () => {};
-document.getElementById('home-room').addEventListener('click', homeRoomHandler({ beforeLeave: () => pauseForLeave() }));
+const homeRoom = homeRoomHandler({ beforeLeave: () => pauseForLeave() });
+document.getElementById('home-room').addEventListener('click', homeRoom);
 
 // Portal kit first (class standard rule 3): no user means the kit has already started
-// the redirect to the portal login; a missing kit script gets a retry control.
-const kitStart = await initKit();
+// the redirect to the portal login; a missing kit script gets a retry control. The
+// kit's start-up replays awards queued offline, so a departure waits for it too, and a
+// learner who is leaving does not get the viewer booted under them.
+const kitStart = await trackPending(initKit());
+homeRoom.whenStaying(() => start(kitStart));
+
+function start(kitStart) {
 if (kitStart.kind !== 'ready') {
   const banner = document.getElementById('error-banner');
   banner.classList.remove('hidden');
@@ -40,6 +46,7 @@ if (kitStart.kind !== 'ready') {
   }
 } else {
   boot(kitStart.kit);
+}
 }
 
 function boot(kit) {

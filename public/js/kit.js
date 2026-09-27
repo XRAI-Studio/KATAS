@@ -85,8 +85,21 @@ export function sameAccount(kit, cookieHeader) {
   return sessionUserId(cookieHeader) === kit.user.id;
 }
 
-// Award calls still in flight, so "Return to Home Room" can wait for them before leaving.
+// Kit work still in flight (award calls, and the kit's start-up, which replays awards
+// queued offline), so "Return to Home Room" can wait for it before leaving.
 const pendingAwards = new Set();
+
+/**
+ * Tracks `promise` until it settles (fulfilled or rejected) so flushAwards waits for it.
+ * Returns `promise` unchanged.
+ */
+export function trackPending(promise) {
+  const settled = Promise.resolve(promise)
+    .then(() => undefined, () => undefined)
+    .finally(() => pendingAwards.delete(settled));
+  pendingAwards.add(settled);
+  return promise;
+}
 
 /**
  * Fire-and-forget award, refused when the signed-in account changed under this tab
@@ -100,23 +113,22 @@ export function award(kit, event, detail, { cookie = () => document.cookie, onMi
     onMismatch();
     return false;
   }
-  const call = Promise.resolve()
+  trackPending(Promise.resolve()
     .then(() => kit.award(event, detail))
-    .catch((err) => console.warn(`[kit] award ${event} failed:`, err && err.message ? err.message : err))
-    .finally(() => pendingAwards.delete(call));
-  pendingAwards.add(call);
+    .catch((err) => console.warn(`[kit] award ${event} failed:`, err && err.message ? err.message : err)));
   return true;
 }
 
-/** Number of award calls not yet settled. */
+/** Number of tracked calls (awards, kit start-up) not yet settled. */
 export function pendingAwardCount() {
   return pendingAwards.size;
 }
 
 /**
- * Resolves true once no award is in flight, or false after `timeoutMs` if some still are
- * (awards are best-effort; leaving must not hang). Awards started during the wait (the
- * player may still be crossing steps) are waited for too, under the same deadline.
+ * Resolves true once no tracked kit work (awards, kit start-up) is in flight, or false
+ * after `timeoutMs` if some still is (awards are best-effort; leaving must not hang).
+ * Work started during the wait (the player may still be crossing steps) is waited for
+ * too, under the same deadline.
  */
 export function flushAwards(timeoutMs = 2000) {
   if (pendingAwards.size === 0) return Promise.resolve(true);
@@ -137,10 +149,15 @@ export const HOME_ROOM_URL = 'https://class.travelschooling.com/';
 
 /**
  * "Return to Home Room": `beforeLeave` (stop playback, so no new awards start), then wait
- * (bounded) for awards in flight, then navigate to the portal launcher. Nothing in the
+ * (bounded) for tracked kit work, then navigate to the portal launcher. Nothing in the
  * viewer is learner-authored work, so there is no leave prompt. Returns the click
- * handler; presses during a departure are ignored, and a page restored from the
- * back/forward cache gets a working button again.
+ * handler. Presses during a departure are ignored. The departure ends, and the button
+ * works again, when the page is restored from the back/forward cache or when the
+ * document is still here `stayMs` after navigating (the navigation was cancelled, e.g.
+ * the browser's Stop).
+ *
+ * `handler.whenStaying(fn)` runs `fn` now, or, during a departure, only if the learner
+ * stays (so the viewer does not start booting on its way out).
  */
 export function homeRoomHandler({
   flush = flushAwards,
@@ -148,16 +165,33 @@ export function homeRoomHandler({
   beforeLeave = () => {},
   win = globalThis,
   timeoutMs = 2000,
+  stayMs = 3000,
+  setTimer = (fn, ms) => setTimeout(fn, ms),
 } = {}) {
   let leaving = false;
-  win.addEventListener?.('pageshow', (e) => { if (e.persisted) leaving = false; });
-  return async () => {
+  let attempt = 0;
+  let held = [];
+  function stay() {
+    leaving = false;
+    attempt++; // a stale "still here" timer from an earlier departure does nothing
+    const run = held;
+    held = [];
+    for (const fn of run) fn();
+  }
+  win.addEventListener?.('pageshow', (e) => { if (e.persisted && leaving) stay(); });
+  const onClick = async () => {
     if (leaving) return;
     leaving = true;
+    const mine = ++attempt;
     try { beforeLeave(); } catch { /* leaving matters more than pausing */ }
     await flush(timeoutMs);
+    if (mine !== attempt) return;
     assign(HOME_ROOM_URL);
+    setTimer(() => { if (mine === attempt) stay(); }, stayMs);
   };
+  onClick.whenStaying = (fn) => { if (leaving) held.push(fn); else fn(); };
+  onClick.isLeaving = () => leaving;
+  return onClick;
 }
 
 /**
