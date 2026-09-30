@@ -222,6 +222,9 @@ export function createPublisher(publish, { track = trackPending } = {}) {
  * union it in, save with the completion-dominant rev. Refused under an account switch,
  * like `award`.
  */
+/** Saves per publish run before giving up until the next one (see kataProgressSync). */
+export const VERIFY_ATTEMPTS = 3;
+
 export function kataProgressSync(kit, { ids, cookie = () => document.cookie, onMismatch = () => {}, track = trackPending } = {}) {
   let progress = { viewed: [], completed: [] };
   let loaded = false;
@@ -231,13 +234,23 @@ export function kataProgressSync(kit, { ids, cookie = () => document.cookie, onM
     onMismatch();
     return false;
   };
+  const holds = (stored, mine) =>
+    mine.viewed.every((id) => stored.viewed.includes(id)) && mine.completed.every((id) => stored.completed.includes(id));
   const publisher = createPublisher(async () => {
     if (!guard()) return;
-    const stored = kataProgress(await kit.load(), ids); // read before merging: events may land during the load
-    progress = mergeKataProgress(progress, stored);
-    if (!guard()) return;
-    const snapshot = progress;
-    await kit.save({ rev: kataRev(snapshot), viewed: snapshot.viewed, completed: snapshot.completed }, kataSummary(snapshot, ids.length));
+    let stored = kataProgress(await kit.load(), ids); // read before merging: events may land during the load
+    // Save, then read back: another device that read the same state and saved last (equal
+    // rev) may have replaced this save; merge its state and save the union again, at most
+    // VERIFY_ATTEMPTS times (Codex KATAS-001). A failed save leaves the kit's cache dirty,
+    // which load() returns, so it counts as held and the kit replays it later.
+    for (let attempt = 0; attempt < VERIFY_ATTEMPTS; attempt++) {
+      progress = mergeKataProgress(progress, stored);
+      if (!guard()) return;
+      const snapshot = progress;
+      await kit.save({ rev: kataRev(snapshot), viewed: snapshot.viewed, completed: snapshot.completed }, kataSummary(snapshot, ids.length));
+      stored = kataProgress(await kit.load(), ids);
+      if (holds(stored, snapshot)) return;
+    }
   }, { track });
   return {
     async start() {

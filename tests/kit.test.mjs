@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { award, createPublisher, flushAwards, furthestStepTracker, homeRoomHandler, HOME_ROOM_URL, initKit, isDevHost, kataProgress, kataProgressSync, kataRev, kataSummary, mergeKataProgress, mockKit, pendingAwardCount, sameAccount, sessionUserId, trackPending, GAME } from '../public/js/kit.js';
+import { award, createPublisher, flushAwards, furthestStepTracker, homeRoomHandler, HOME_ROOM_URL, initKit, isDevHost, kataProgress, kataProgressSync, kataRev, kataSummary, mergeKataProgress, VERIFY_ATTEMPTS, mockKit, pendingAwardCount, sameAccount, sessionUserId, trackPending, GAME } from '../public/js/kit.js';
 
 function jwt(sub) {
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -519,6 +519,53 @@ test('B (viewed two, rev 2) then A (completed Seisan): the server holds both', a
   assert.deepEqual(portal.row.state.completed, ['seisan']);
   assert.deepEqual([...portal.row.state.viewed].sort(), ['chinto', 'seisan', 'wansu']);
   assert.equal(portal.row.summary.headline, '1 of 5 katas completed');
+});
+
+test("another device's equal-rev save landing between this save and its read-back is merged and saved again (KATAS-001)", async () => {
+  const portal = fakePortal();
+  // Both devices had viewed Seisan and Chinto and read that state; B completes Chinto.
+  portal.row = { state: { rev: 2, viewed: ['seisan', 'chinto'], completed: [] }, summary: {} };
+  const kit = await fakeKit(portal, new Map()).init();
+  kit.mock = true;
+  const { set, track } = localTrack();
+  const sync = kataProgressSync(kit, { ids: IDS, cookie: () => '', track });
+  await sync.start();
+  // A's save lands, then B's equal-rev save (made from the same rev-2 read) replaces it
+  // before A reads back.
+  const save = portal.saveProgress.bind(portal);
+  let raced = false;
+  portal.saveProgress = async (args) => {
+    const r = await save(args);
+    if (!raced) {
+      raced = true;
+      await save({ p_state: { rev: 102, viewed: ['seisan', 'chinto'], completed: ['chinto'] }, p_summary: { headline: '1 of 5 katas completed' }, p_rev: 102 });
+    }
+    return r;
+  };
+  sync.record('completed', 'seisan');
+  await idle(set);
+  assert.deepEqual([...portal.row.state.completed].sort(), ['chinto', 'seisan']);
+  assert.equal(portal.row.state.rev, 202);
+  assert.equal(portal.row.summary.headline, '2 of 5 katas completed');
+});
+
+test('the read-back retry is bounded: a server that keeps replacing the save gets at most VERIFY_ATTEMPTS saves per run', async () => {
+  const portal = fakePortal();
+  const kit = await fakeKit(portal, new Map()).init();
+  kit.mock = true;
+  const { set, track } = localTrack();
+  const sync = kataProgressSync(kit, { ids: IDS, cookie: () => '', track });
+  await sync.start();
+  const save = portal.saveProgress.bind(portal);
+  portal.saveProgress = async (args) => {
+    await save(args);
+    portal.row = { state: { rev: 999, viewed: [], completed: [] }, summary: {} }; // always replaced
+    return true;
+  };
+  const before = portal.saveCalls;
+  sync.record('viewed', 'seisan');
+  await idle(set);
+  assert.equal(portal.saveCalls - before, VERIFY_ATTEMPTS);
 });
 
 test('equal set sizes on two devices (one viewed each) end with both on the server', async () => {

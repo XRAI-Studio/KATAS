@@ -68,6 +68,13 @@ before reconnecting, and it only ever undercounts: the headline never drops belo
 single device's count and never shows "practised" after a completion. XP is unaffected
 (awards are separate). Closing it fully needs a server-side union RPC or a kit change.
 
+The same limit applies to two sessions (tabs or devices) that complete **different** katas
+at almost the same moment: both read the same stored state and both save an equal rev, and
+the SQL keeps the later write. Every publish reads back after saving and, if another save
+replaced it, merges and saves the union again (at most three saves per run), which catches
+the other save when it lands before the read-back; one landing after it (a window of well
+under a second, with the kit's 300 ms debounce) still undercounts as above.
+
 Known gap: the portal seed also lists `quiz_correct`, `quiz_perfect` and `journal_entry`
 for this class. The viewer has no quiz or journal yet (quiz content exists on the unmerged
 `content/course-draft` branch, with no UI), so those events are never emitted.
