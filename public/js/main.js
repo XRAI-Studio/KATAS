@@ -196,7 +196,11 @@ async function loadKata(file) {
 
 if (isDevHost(location.hostname)) {
   // e2e hook (scripts/e2e.ts): reach the player without going through the UI.
-  window.__katasDev = { player: () => player, seek: (t) => { player.seek(t); applyTime(t); }, kata: () => currentKata };
+  window.__katasDev = {
+    player: () => player, seek: (t) => { player.seek(t); applyTime(t); }, kata: () => currentKata,
+    // Camera state for the follow/preset e2e: orbit target, performer chest, Follow flag.
+    view: () => ({ target: ctx.controls.target.toArray(), chest: chestPos.toArray(), following: ctx.following, gliding: ctx.gliding, rebase: ctx.rebaseStats }),
+  };
 }
 
 // Shareable / testable state via URL params: ?kata=chinto&t=30&play=1&bunkai=1&cam=side&follow=1
@@ -210,12 +214,13 @@ async function applyUrlParams() {
     document.getElementById('toggle-bunkai').checked = true;
     bunkai.setEnabled(true);
   }
-  if (q.get('cam')) { lastPreset = q.get('cam'); setCameraPreset(lastPreset); }
+  // Follow first, so a shared link's preset glide is made relative to the performer.
   if (q.get('follow') === '1') {
     document.getElementById('toggle-follow').checked = true;
     ctx.setFollow(true);
     requestRebase();
   }
+  if (q.get('cam')) { lastPreset = q.get('cam'); setCameraPreset(lastPreset); }
   const t = parseFloat(q.get('t'));
   if (player && !Number.isNaN(t)) { player.seek(t); applyTime(t); }
   if (player && q.get('play') === '1') player.play();

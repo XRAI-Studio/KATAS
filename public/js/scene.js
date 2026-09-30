@@ -272,7 +272,21 @@ export function initScene(canvas) {
   const delta = new THREE.Vector3();
   controls.addEventListener('start', () => { suspended = true; });
   controls.addEventListener('end', () => { suspended = false; trackedValid = false; });
-  function setFollow(on) { following = !!on; trackedValid = false; }
+  function setFollow(on) {
+    following = !!on;
+    trackedValid = false;
+    // A glide already under way follows the new mode (KATAS-AVATAR-002-R1): turning Follow
+    // on makes it end on the performer; turning it off sends it to the preset's world pose.
+    if (tween) {
+      tween.relative = following;
+      const end = presetEndpoints(tween.preset, following, chest);
+      tween.toPos.set(...end.pos);
+      tween.toTarget.set(...end.target);
+    }
+  }
+  // How far the last re-acquire moved the view (e2e: a re-acquire right after a preset glide
+  // must move nothing, or the camera visibly snaps).
+  let rebases = 0, lastRebaseShift = 0;
   function rebaseFollow(pos) {
     chest.x = pos.x; chest.y = pos.y; chest.z = pos.z;
     // A preset glide owns the camera until it ends; its end re-acquires the performer
@@ -280,6 +294,7 @@ export function initScene(canvas) {
     if (tween) { trackedValid = false; return; }
     if (following) {
       delta.subVectors(pos, controls.target);
+      rebases++; lastRebaseShift = delta.length();
       controls.target.copy(pos);
       camera.position.add(delta);
     }
@@ -327,6 +342,8 @@ export function initScene(canvas) {
     scene, camera, renderer, controls, setCameraPreset, tick,
     setFollow, follow, rebaseFollow,
     get following() { return following; },
+    get gliding() { return tween !== null; },
+    get rebaseStats() { return { count: rebases, shift: lastRebaseShift }; },
     set onTweenEnd(cb) { onTweenEnd = cb || (() => {}); },
   };
 }

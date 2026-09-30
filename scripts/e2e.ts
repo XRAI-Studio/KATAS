@@ -249,6 +249,50 @@ async function viewerInDevelopmentMode() {
     await lastSaveIs(page, "1 kata practised");
     log('dev: tile save "1 kata practised"');
 
+    // Follow + camera presets (KATAS-AVATAR-002): the glide ends on the performer and the
+    // follow-cam's re-acquire moves nothing, for a shared link and for Follow turned on
+    // mid-glide. Every animation frame from page load is recorded (the glide lasts ~0.5 s,
+    // so recording after the actions would miss the snap).
+    type View = { target: number[]; chest: number[]; following: boolean; gliding: boolean; rebase: { count: number; shift: number } };
+    await page.addInitScript(`(() => {
+      window.__viewTrace = [];
+      const step = () => { const d = window.__katasDev; if (d && d.view) window.__viewTrace.push(d.view()); requestAnimationFrame(step); };
+      requestAnimationFrame(step);
+    })()`);
+    const followCheck = async (label: string, act: () => Promise<unknown>) => {
+      await page.evaluate("window.__viewTrace && (window.__viewTrace.length = 0)");
+      await act();
+      await page.waitForTimeout(2000);
+      const trace = (await page.evaluate("window.__viewTrace.slice()")) as View[];
+      const dist = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+      if (trace.length < 5) throw new Error(`${label}: only ${trace.length} frames recorded`);
+      const last = trace[trace.length - 1];
+      if (!last.following) throw new Error(`${label}: Follow is off`);
+      if (dist(last.target, last.chest) > 0.05) throw new Error(`${label}: camera target ${dist(last.target, last.chest).toFixed(2)} m from the performer after the glide`);
+      // The glide must end on the performer: the follow-cam re-acquires in the frame the glide
+      // ends, and that re-acquire must move nothing (an unfixed glide ends on the preset's
+      // world spot, and the re-acquire snaps the view onto the performer).
+      const end = trace.findIndex((v, i) => i > 0 && trace[i - 1].gliding && !v.gliding);
+      if (end < 0) throw new Error(`${label}: no preset glide observed in ${trace.length} frames`);
+      if (trace[end].rebase.count === trace[end - 1].rebase.count) throw new Error(`${label}: no re-acquire at the end of the glide`);
+      const snap = trace[end].rebase.shift;
+      if (snap > 0.05) throw new Error(`${label}: the follow-cam snapped ${snap.toFixed(2)} m when the glide ended`);
+      log(`dev: ${label}: the glide ends on the performer (re-acquire moved ${snap.toFixed(3)} m; ${trace.length} frames)`);
+    };
+    await followCheck("shared link cam=hands&follow=1 at t=30", () =>
+      page.goto(`${base}/?kata=chinto&t=30&cam=hands&follow=1`, { waitUntil: "load" }));
+    await followCheck("Follow turned on during a Side glide", () =>
+      page.evaluate(() => {
+        const f = document.getElementById("toggle-follow") as HTMLInputElement;
+        if (f.checked) f.click();                                         // Follow off
+        (window as unknown as { __katasDev: { seek: (t: number) => void } }).__katasDev.seek(12); // performer away from the preset spot
+        const side = [...document.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Side") as HTMLButtonElement;
+        side.click();                                                     // glide starts with fixed world endpoints
+        f.click();                                                        // Follow on, same task: mid-glide
+      }));
+    await page.goto(`${base}/`, { waitUntil: "load" });
+    await page.waitForFunction(() => document.querySelectorAll("#kata-select option").length === 5, null, { timeout: 30_000 });
+
     await page.selectOption("#kata-select", "seiunchin.json");
     await page.waitForFunction(() => ((window as unknown as { __kitAwards?: Award[] }).__kitAwards ?? []).filter((x) => x.event === "kata_view").length === 2, null, { timeout: 30_000 });
     log("dev: kata_view on kata change");
