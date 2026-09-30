@@ -159,7 +159,7 @@ async function viewerInDevelopmentMode() {
     page.on("pageerror", (e) => errors.push(e.message));
 
     await page.goto(`${base}/`, { waitUntil: "load" });
-    expectEq(await page.title(), "Isshin Ryu Kata Viewer", "title");
+    expectEq(await page.title(), "Isshin Ryu Katas", "title");
     await page.waitForFunction(() => document.querySelectorAll("#kata-select option").length === 5, null, { timeout: 30_000 });
     expectEq(await page.locator("#error-banner").isVisible(), false, "error banner hidden");
     await page.waitForFunction(() => ((window as unknown as { __kitAwards?: Award[] }).__kitAwards ?? []).length >= 1, null, { timeout: 30_000 });

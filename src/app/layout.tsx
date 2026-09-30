@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 // The shell has no page of its own: "/" is rewritten to the static viewer in public/.
 // This layout only exists because Next requires a root layout to build the app.
-export const metadata = { title: "Isshin Ryu Kata Viewer" };
+export const metadata = { title: "Isshin Ryu Katas" };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (

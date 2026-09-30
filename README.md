@@ -1,4 +1,4 @@
-# KATAS
+# Isshin Ryu Katas
 
 An Isshin Ryu kata viewer for Travel Schooling learners: step through Seisan, Seiunchin,
 Naihanchi, Wansu and Chinto on an animated avatar with a scrubbable timeline, camera

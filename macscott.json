@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "title": "KATAS",
+  "title": "Isshin Ryu Katas",
   "description": "A 3D Isshin Ryu kata viewer: step through Seisan, Seiunchin, Naihanchi, Wansu, and Chinto on an animated avatar with a scrubbable timeline, camera presets, a bunkai attacker overlay, and a browser coach voice. A Travel Schooling class: sign in at the portal, and stepping through a kata earns XP.",
   "owner": "scott",
   "liveUrl": "https://karate.travelschooling.com",
