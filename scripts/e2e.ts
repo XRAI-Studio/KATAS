@@ -222,9 +222,23 @@ async function viewerInDevelopmentMode() {
     const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
     const errors: string[] = [];
     page.on("pageerror", (e) => errors.push(e.message));
+    // The Blender-built avatar (public/assets/karateka.glb) must load and be adopted, not
+    // fall back to the procedural mannequin (avatar.js logs which one it kept).
+    const avatarLog: string[] = [];
+    page.on("console", (m) => { if (m.text().startsWith("karateka:")) avatarLog.push(m.text()); });
+    const glbResponse = page.waitForResponse((r) => r.url().endsWith("/assets/karateka.glb"), { timeout: 30_000 });
 
     await page.goto(`${base}/`, { waitUntil: "load" });
     expectEq(await page.title(), "Isshin Ryu Katas", "title");
+    const glb = await glbResponse;
+    expectEq(glb.status(), 200, "karateka.glb status");
+    const glbType = glb.headers()["content-type"] ?? "";
+    if (/text\/html/.test(glbType)) throw new Error(`karateka.glb served as ${glbType} (the page gate or a rewrite answered)`);
+    expectEq((await glb.body()).subarray(0, 4).toString("latin1"), "glTF", "karateka.glb magic");
+    for (let i = 0; i < 60 && !avatarLog.some((l) => l === "karateka: glb active" || /rejected|failed/.test(l)); i++) await page.waitForTimeout(250);
+    expectEq(avatarLog.find((l) => l === "karateka: glb active" || /rejected|failed/.test(l)), "karateka: glb active", "avatar adopted the GLB");
+    await page.screenshot({ path: "e2e-artifacts/katas-glb-avatar.png" });
+    log(`dev: karateka.glb 200 (${glbType || "no type"}), adopted; screenshot e2e-artifacts/katas-glb-avatar.png`);
     await page.waitForFunction(() => document.querySelectorAll("#kata-select option").length === 5, null, { timeout: 30_000 });
     expectEq(await page.locator("#error-banner").isVisible(), false, "error banner hidden");
     await page.waitForFunction(() => ((window as unknown as { __kitAwards?: Award[] }).__kitAwards ?? []).length >= 1, null, { timeout: 30_000 });

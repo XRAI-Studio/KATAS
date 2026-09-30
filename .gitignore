@@ -6,3 +6,6 @@ next-env.d.ts
 e2e-artifacts/
 .env*
 .vercel
+
+# e2e screenshots
+e2e-artifacts/

@@ -1,5 +1,5 @@
 // Timeline playback engine — pure logic, no Three.js, no DOM (Node-testable).
-import { composePose, JOINT_NAMES } from './poses.js';
+import { composePose, JOINT_NAMES, HAND_SHAPES } from './poses.js';
 import { eulerXYZToQuat, slerp } from './quat.js';
 import { footSoleY } from './rig.js';
 
@@ -42,10 +42,21 @@ function segmentCurve(fromMoving, toEase) {
 
 // ---------------------------------------------------------------------------
 // Keyframe resolution. An entry is
-//   { time, parts: [poseName...], overrides?, root?, ease?, hold?, embusen? }
+//   { time, parts: [poseName...], overrides?, adjust?, root?, ease?, hold?, embusen? }
 // and resolves to an internal keyframe whose pose has quaternion joints.
+// `overrides` replaces whole joints; `adjust` merges single axes onto the
+// resolved joint (e.g. { wristR: { y: 1.57 } } turns a fist horizontal while
+// keeping the pose's authored wrist flexion).
 // ---------------------------------------------------------------------------
-const HAND_OPEN = { open: 1, fist: 0 };
+
+// Per-side hand state handed to the mesh: one weight per shape, summing to 1.
+export function handWeights(shapeA, shapeB = shapeA, u = 0) {
+  const w = {};
+  for (const s of HAND_SHAPES) w[s] = 0;
+  w[shapeA] += 1 - u;
+  w[shapeB] += u;
+  return w;
+}
 
 function resolveEntry(entry, poseLib) {
   const parts = [];
@@ -61,6 +72,15 @@ function resolveEntry(entry, poseLib) {
   if (entry.overrides) parts.push({ joints: entry.overrides });
   if (entry.root) parts.push({ root: entry.root });
   const pose = composePose(...parts);
+  if (entry.adjust) {
+    for (const [name, axes] of Object.entries(entry.adjust)) {
+      if (!pose.joints[name]) throw new Error(`adjust: unknown joint "${name}"`);
+      pose.joints[name] = { ...pose.joints[name], ...axes };
+    }
+  }
+  for (const side of ['L', 'R']) {
+    if (!HAND_SHAPES.includes(pose.hands[side])) throw new Error(`unknown hand shape "${pose.hands[side]}"`);
+  }
   const joints = {};
   for (const n of JOINT_NAMES) joints[n] = eulerXYZToQuat(pose.joints[n]);
   const kf = {
@@ -68,7 +88,7 @@ function resolveEntry(entry, poseLib) {
     pose: {
       root: pose.root,
       joints,
-      hands: { L: HAND_OPEN[pose.hands.L], R: HAND_OPEN[pose.hands.R] },
+      hands: { L: pose.hands.L, R: pose.hands.R },   // shape names; sampled as weights
       airborne: pose.airborne,
     },
     techniques,
@@ -172,6 +192,7 @@ export function buildTimeline(kata, poseLib) {
         time,
         parts: [kf.stance, ...(kf.arms || []), ...(kf.legs || [])].filter(Boolean),
         overrides: kf.overrides,
+        adjust: kf.adjust,
         root: kf.root,
         ease: kf.ease,
         hold: kf.hold !== undefined ? kf.hold * SECONDS_PER_BEAT : undefined,
@@ -211,7 +232,8 @@ function grounded(out) {
 function snapshot(kf) {
   const joints = {};
   for (const n of JOINT_NAMES) joints[n] = { ...kf.pose.joints[n] };
-  const out = { root: { ...kf.pose.root }, joints, hands: { ...kf.pose.hands }, air: kf.pose.airborne ? 1 : 0 };
+  const hands = { L: handWeights(kf.pose.hands.L), R: handWeights(kf.pose.hands.R) };
+  const out = { root: { ...kf.pose.root }, joints, hands, air: kf.pose.airborne ? 1 : 0 };
   if (kf.embusen) out.embusen = { ...kf.embusen };
   return grounded(out);
 }
@@ -239,8 +261,8 @@ export function sampleClip(kfs, t) {
     ry: lerpAngle(a.pose.root.ry, b.pose.root.ry, u),
   };
   const hands = {
-    L: lerp(a.pose.hands.L, b.pose.hands.L, u),
-    R: lerp(a.pose.hands.R, b.pose.hands.R, u),
+    L: handWeights(a.pose.hands.L, b.pose.hands.L, u),
+    R: handWeights(a.pose.hands.R, b.pose.hands.R, u),
   };
   const air = lerp(a.pose.airborne ? 1 : 0, b.pose.airborne ? 1 : 0, u);
   const out = { root, joints, hands, air };
@@ -268,12 +290,13 @@ export function stepAt(timeline, t) {
 }
 
 export class Player {
-  constructor(timeline, { onStep, onKiai, onComplete } = {}) {
+  constructor(timeline, { onStep, onKiai, onComplete, onSeek } = {}) {
     this.timeline = timeline;
     this.onStep = onStep || (() => {});
     this.onKiai = onKiai || (() => {});
     // Fires once per play-through, when playback (not a seek) reaches the end.
     this.onComplete = onComplete || (() => {});
+    this.onSeek = onSeek || (() => {});      // any time jump (scrub, step buttons, replay)
     this._time = 0;
     this._speed = 1;
     this._playing = false;
@@ -285,7 +308,7 @@ export class Player {
   get speed() { return this._speed; }
 
   play() {
-    if (this._time >= this.timeline.duration) this._time = 0; // replay from start
+    if (this._time >= this.timeline.duration) this.seek(0); // replay from start
     this._playing = true;
   }
   pause() { this._playing = false; }
@@ -296,6 +319,7 @@ export class Player {
   seek(t) {
     this._time = Math.min(this.timeline.duration, Math.max(0, t));
     this._notifyStep(false);
+    this.onSeek(this._time);
   }
 
   seekStep(idx) {

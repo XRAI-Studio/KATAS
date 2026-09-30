@@ -1,0 +1,166 @@
+{
+  "hipsY": 0.95,
+  "joints": {
+    "hips": {
+      "parent": null,
+      "offset": {
+        "x": 0,
+        "y": 0,
+        "z": 0
+      }
+    },
+    "spine": {
+      "parent": "hips",
+      "offset": {
+        "x": 0,
+        "y": 0.12,
+        "z": 0
+      }
+    },
+    "chest": {
+      "parent": "spine",
+      "offset": {
+        "x": 0,
+        "y": 0.14,
+        "z": 0
+      }
+    },
+    "neck": {
+      "parent": "chest",
+      "offset": {
+        "x": 0,
+        "y": 0.3,
+        "z": 0
+      }
+    },
+    "head": {
+      "parent": "neck",
+      "offset": {
+        "x": 0,
+        "y": 0.05,
+        "z": 0
+      }
+    },
+    "shoulderL": {
+      "parent": "chest",
+      "offset": {
+        "x": 0.24,
+        "y": 0.24,
+        "z": 0
+      }
+    },
+    "elbowL": {
+      "parent": "shoulderL",
+      "offset": {
+        "x": 0,
+        "y": -0.28,
+        "z": 0
+      }
+    },
+    "wristL": {
+      "parent": "elbowL",
+      "offset": {
+        "x": 0,
+        "y": -0.26,
+        "z": 0
+      }
+    },
+    "shoulderR": {
+      "parent": "chest",
+      "offset": {
+        "x": -0.24,
+        "y": 0.24,
+        "z": 0
+      }
+    },
+    "elbowR": {
+      "parent": "shoulderR",
+      "offset": {
+        "x": 0,
+        "y": -0.28,
+        "z": 0
+      }
+    },
+    "wristR": {
+      "parent": "elbowR",
+      "offset": {
+        "x": 0,
+        "y": -0.26,
+        "z": 0
+      }
+    },
+    "hipL": {
+      "parent": "hips",
+      "offset": {
+        "x": 0.11,
+        "y": -0.05,
+        "z": 0
+      }
+    },
+    "kneeL": {
+      "parent": "hipL",
+      "offset": {
+        "x": 0,
+        "y": -0.42,
+        "z": 0
+      }
+    },
+    "ankleL": {
+      "parent": "kneeL",
+      "offset": {
+        "x": 0,
+        "y": -0.4,
+        "z": 0
+      }
+    },
+    "hipR": {
+      "parent": "hips",
+      "offset": {
+        "x": -0.11,
+        "y": -0.05,
+        "z": 0
+      }
+    },
+    "kneeR": {
+      "parent": "hipR",
+      "offset": {
+        "x": 0,
+        "y": -0.42,
+        "z": 0
+      }
+    },
+    "ankleR": {
+      "parent": "kneeR",
+      "offset": {
+        "x": 0,
+        "y": -0.4,
+        "z": 0
+      }
+    }
+  },
+  "foot": {
+    "w": 0.1,
+    "h": 0.055,
+    "l": 0.22,
+    "y": -0.08,
+    "z": 0.05
+  },
+  "footSeg": {
+    "heel": 0.07,
+    "ball": 0.1,
+    "toe": 0.05
+  },
+  "soleBelowAnkle": 0.1075,
+  "hand": {
+    "len": 0.19,
+    "w": 0.09,
+    "thick": 0.035
+  },
+  "handShapes": [
+    "fist",
+    "open",
+    "spear",
+    "palm"
+  ],
+  "schemaHash": "34e8f9721d058927"
+}

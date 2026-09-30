@@ -198,15 +198,34 @@ test('every segment curve is monotonic and hits its endpoints', () => {
   }
 });
 
-test('hand openness blends across a segment into an open-hand technique', () => {
+test('hand shape blends across a segment into an open-hand technique', () => {
   const clip = buildClip([
     { time: 0, parts: ['seisanDachiR', 'chamberR'], ease: 'soft' },
     { time: 1, parts: ['seisanDachiR', 'shutoLowR'], ease: 'soft' },
   ], POSES, { hold: 0 });
-  assert.deepEqual(sampleClip(clip, 0).hands, { L: 0, R: 0 });
-  assert.deepEqual(sampleClip(clip, 1).hands, { L: 0, R: 1 });
+  assert.equal(sampleClip(clip, 0).hands.R.fist, 1);
+  assert.equal(sampleClip(clip, 1).hands.R.open, 1);
+  assert.equal(sampleClip(clip, 1).hands.L.fist, 1);
   const midR = sampleClip(clip, 0.5).hands.R;
-  assert.ok(midR > 0 && midR < 1, `mid hand blend ${midR}`);
+  assert.ok(midR.open > 0 && midR.open < 1 && near(midR.fist + midR.open, 1), `mid hand blend ${JSON.stringify(midR)}`);
+});
+
+test('every time jump fires onSeek with the clamped time: seek, seekStep, next/prev, replay from the end', () => {
+  const tl = buildTimeline(kata, POSES);
+  const seen = [];
+  const p = new Player(tl, { onSeek: (t) => seen.push(t) });
+  const last = tl.steps.length - 1;
+  p.seek(-5);            assert.equal(seen.at(-1), 0);
+  p.seek(1e9);           assert.equal(seen.at(-1), tl.duration);
+  p.seekStep(0);         assert.equal(seen.at(-1), 0);
+  p.nextStep();          assert.equal(seen.at(-1), tl.steps[1].start);
+  p.prevStep();          assert.equal(seen.at(-1), tl.steps[0].start);
+  p.seekStep(last);      assert.equal(seen.at(-1), tl.steps[last].start);
+  const n = seen.length;
+  p.seek(tl.duration); p.play();                       // replay from the end goes through seek(0)
+  assert.equal(seen.at(-1), 0); assert.equal(seen.length, n + 2);
+  p.pause(); p.tick(0.1);                              // plain playback is not a seek
+  assert.equal(seen.length, n + 2);
 });
 
 test('sampling is pure — same t gives identical pose', () => {

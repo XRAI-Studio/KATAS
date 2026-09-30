@@ -9,7 +9,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "validate": "node tools/validate-data.mjs",
-    "test": "npm run validate && node --test tests/*.test.mjs && vitest run",
+    "test": "npm run validate && node --import ./tests/three-resolver.mjs --test tests/*.test.mjs && vitest run",
     "verify": "npm run typecheck && npm run lint && npm test",
     "e2e": "tsx scripts/e2e.ts"
   },

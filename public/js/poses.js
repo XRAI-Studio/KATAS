@@ -7,10 +7,14 @@
 //    root.y is an offset from standing hip height (negative = lower stance).
 //  - Joint zero = standing straight, arms hanging at sides.
 //  - Optional metadata on a pose: kime (technique arrival, snaps and holds),
-//    hands {L|R: 'open'|'fist'}, airborne (deliberate root lift; skip ground
+//    hands {L|R: one of HAND_SHAPES}, airborne (deliberate root lift; skip ground
 //    clamp), pass (pass-through position, no stop).
 //  - Rotation signs: joint +x rotates the hanging limb backward (-Z), -x forward (+Z);
 //    knee flexion is +x; elbow flexion is -x.
+
+// Hand shapes the mesh knows how to show. The sampler blends between them;
+// the avatar owns what each one looks like.
+export const HAND_SHAPES = Object.freeze(['fist', 'open', 'spear', 'palm']);
 
 export const JOINT_NAMES = [
   'hips', 'spine', 'chest', 'neck', 'head',
@@ -280,15 +284,17 @@ const LEGS_RIGHT = {
 // that lands with kime. Isshin Ryu blocks are closed-fist; open-hand
 // techniques are listed explicitly; every arm pose states the hand shape of the
 // hand(s) it uses so a later partial (e.g. a punch after a shuto) wins per side.
+// Shapes: 'open' = knife hand (shuto/haito), 'spear' = nukite, 'palm' = shote.
 // ---------------------------------------------------------------------------
 const SOFT_ARMS = new Set(['chamber', 'guardChest', 'grabPull']);
 const SOFT_BOTH = new Set(['handsStacked', 'guardBoth', 'armsDown', 'dumpLoad', 'xGuardChest']);
-const OPEN_RIGHT = new Set(['nukite', 'haito', 'shutoLow', 'shutoMid', 'shote', 'openHandBlock']);
+const OPEN_RIGHT = new Set(['haito', 'shutoLow', 'shutoMid', 'openHandBlock']);
+const SHAPE_RIGHT = { nukite: 'spear', shote: 'palm' };
 const OPEN_BOTH = new Set(['handsStacked', 'archerBlockR', 'dumpLoad', 'dumpFinish', 'doubleShutoThroat']);
 
 for (const [name, pose] of Object.entries(ARMS_RIGHT)) {
   if (!SOFT_ARMS.has(name)) pose.kime = true;
-  pose.hands = { R: OPEN_RIGHT.has(name) ? 'open' : 'fist' };
+  pose.hands = { R: SHAPE_RIGHT[name] || (OPEN_RIGHT.has(name) ? 'open' : 'fist') };
 }
 for (const [name, pose] of Object.entries(ARMS_BOTH)) {
   if (!SOFT_BOTH.has(name)) pose.kime = true;

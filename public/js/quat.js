@@ -69,3 +69,36 @@ export function rotateVec(q, v) {
     z: v.z + q.w * tz + (q.x * ty - q.y * tx),
   };
 }
+
+export const IDENTITY_QUAT = Object.freeze({ x: 0, y: 0, z: 0, w: 1 });
+
+export function conjQuat(q) {
+  return { x: -q.x, y: -q.y, z: -q.z, w: q.w };
+}
+
+export function quatFromAxisAngle(axis, angle) {
+  const n = Math.hypot(axis.x, axis.y, axis.z) || 1;
+  const s = Math.sin(angle / 2) / n;
+  return { x: axis.x * s, y: axis.y * s, z: axis.z * s, w: Math.cos(angle / 2) };
+}
+
+// Rig joints are world-aligned at rest; skinned-mesh bones are not (a bone's
+// frame points along the bone). For a bone whose accumulated rest orientation
+// is A (armature space) under a parent with accumulated rest orientation
+// Aparent, the local bone rotation that reproduces rig joint rotation q is
+//   Aparent⁻¹ · q · A
+// so that world = Q·A with Q the accumulated rig rotation (see PLAN.md step 13).
+export function poseToBoneLocal(q, restParent, rest) {
+  return mulQuat(mulQuat(conjQuat(restParent), q), rest);
+}
+
+// Signed twist of q about its own (post-rotation) y axis, from the swing-twist
+// decomposition q = swing · twist. For a hanging limb this is the roll about
+// the limb: the forearm pronation a wrist quaternion carries.
+export function twistAboutY(q) {
+  if (Math.abs(q.y) < 1e-12 && Math.abs(q.w) < 1e-12) return 0;   // 180° swing: twist undefined
+  let a = 2 * Math.atan2(q.y, q.w);
+  if (a > Math.PI) a -= 2 * Math.PI;
+  if (a <= -Math.PI) a += 2 * Math.PI;
+  return a;
+}
