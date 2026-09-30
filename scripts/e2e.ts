@@ -281,15 +281,20 @@ async function viewerInDevelopmentMode() {
     };
     await followCheck("shared link cam=hands&follow=1 at t=30", () =>
       page.goto(`${base}/?kata=chinto&t=30&cam=hands&follow=1`, { waitUntil: "load" }));
-    await followCheck("Follow turned on during a Side glide", () =>
-      page.evaluate(() => {
-        const f = document.getElementById("toggle-follow") as HTMLInputElement;
-        if (f.checked) f.click();                                         // Follow off
-        (window as unknown as { __katasDev: { seek: (t: number) => void } }).__katasDev.seek(12); // performer away from the preset spot
-        const side = [...document.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Side") as HTMLButtonElement;
-        side.click();                                                     // glide starts with fixed world endpoints
-        f.click();                                                        // Follow on, same task: mid-glide
-      }));
+    // Follow turned on after a Side glide has started (rendered frames already gliding): the
+    // glide switches to the performer and ends on them, so the re-acquire at its end moves
+    // nothing. Continuity at the switch itself is unit-tested (retargetTween).
+    await page.evaluate(() => {
+      const f = document.getElementById("toggle-follow") as HTMLInputElement;
+      if (f.checked) f.click();
+      (window as unknown as { __katasDev: { seek: (t: number) => void } }).__katasDev.seek(12);
+    });
+    await page.waitForTimeout(600);
+    await followCheck("Follow turned on mid-glide", async () => {
+      await page.evaluate(() => ([...document.querySelectorAll("button")].find((b) => b.textContent?.trim() === "Side") as HTMLButtonElement).click());
+      await page.waitForFunction(() => (window as unknown as { __viewTrace: Array<{ gliding: boolean }> }).__viewTrace.some((v) => v.gliding), null, { timeout: 10_000 });
+      await page.evaluate(() => (document.getElementById("toggle-follow") as HTMLInputElement).click());
+    });
     await page.goto(`${base}/`, { waitUntil: "load" });
     await page.waitForFunction(() => document.querySelectorAll("#kata-select option").length === 5, null, { timeout: 30_000 });
 

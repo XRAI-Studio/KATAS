@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from '../lib/three/OrbitControls.js';
-import { presetEndpoints } from './camera-tween.js';
+import { presetEndpoints, retargetTween } from './camera-tween.js';
 
 // Okinawan dojo: 12m wide (x), 9m deep (z). Kamiza on the back wall (-z),
 // performer starts at the origin facing +z (toward the default camera).
@@ -275,14 +275,9 @@ export function initScene(canvas) {
   function setFollow(on) {
     following = !!on;
     trackedValid = false;
-    // A glide already under way follows the new mode (KATAS-AVATAR-002-R1): turning Follow
-    // on makes it end on the performer; turning it off sends it to the preset's world pose.
-    if (tween) {
-      tween.relative = following;
-      const end = presetEndpoints(tween.preset, following, chest);
-      tween.toPos.set(...end.pos);
-      tween.toTarget.set(...end.target);
-    }
+    // A glide already under way follows the new mode and restarts from the current pose
+    // (KATAS-AVATAR-002-R1, -R2).
+    if (tween) retargetTween(tween, following, camera.position, controls.target, chest);
   }
   // How far the last re-acquire moved the view (e2e: a re-acquire right after a preset glide
   // must move nothing, or the camera visibly snaps).

@@ -17,3 +17,21 @@ export function presetEndpoints(preset, relative, chest) {
   const pos = [0, 1, 2].map((i) => target[i] + (preset.pos[i] - preset.target[i]));
   return { pos, target };
 }
+
+/**
+ * Follow changed while a preset glide is under way (Codex KATAS-AVATAR-002-R1, -R2): the glide
+ * switches to the new mode's endpoints and restarts from where the camera is now, so the view
+ * is continuous at the switch (its first interpolated frame starts at the current pose).
+ * Mutates `tween` ({ t, preset, relative, fromPos, fromTarget, toPos, toTarget }, vectors with
+ * copy/set) and returns it.
+ */
+export function retargetTween(tween, relative, currentPos, currentTarget, chest) {
+  const end = presetEndpoints(tween.preset, relative, chest);
+  tween.relative = relative;
+  tween.t = 0;
+  tween.fromPos.copy(currentPos);
+  tween.fromTarget.copy(currentTarget);
+  tween.toPos.set(...end.pos);
+  tween.toTarget.set(...end.target);
+  return tween;
+}
