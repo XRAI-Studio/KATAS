@@ -14,16 +14,32 @@ export function isDevHost(hostname) {
 
 const EMPTY_AWARD = { awarded_xp: 0, xp: 0, gems: 0, level: 1, streak: 0, level_up: false, new_achievements: [] };
 
-/** A kit that records awards on window.__kitAwards instead of calling the portal. */
+const clone = (v) => (v === undefined ? v : JSON.parse(JSON.stringify(v)));
+
+/**
+ * A kit that records awards on window.__kitAwards and saves on window.__kitSaves instead of
+ * calling the portal. It keeps one stored state in memory, so load and save round-trip, and
+ * drops a save whose rev is lower than the stored one, as `save_progress` does.
+ * `win.__kitLoadGate` (e2e): a promise every load waits for, to hold the first load open.
+ */
 export function mockKit(win) {
   const awards = (win.__kitAwards = win.__kitAwards || []);
+  const saves = (win.__kitSaves = win.__kitSaves || []);
+  let stored = null;
+  const revOf = (state) => (state && typeof state.rev === 'number' ? state.rev : 0);
   return {
     mock: true,
     user: { id: 'dev', displayName: 'Dev Learner', role: 'student' },
     totals: { xp: 0, gems: 0, level: 1, streak: 0 },
     launcherUrl: 'https://class.travelschooling.com',
-    load: async () => ({}),
-    save: async () => undefined,
+    load: async () => {
+      if (win.__kitLoadGate) await win.__kitLoadGate;
+      return stored ? clone(stored) : {};
+    },
+    save: async (state, summary = {}) => {
+      saves.push(clone({ state, summary }));
+      if (!stored || revOf(state) >= revOf(stored)) stored = clone(state);
+    },
     award: async (event, detail = {}) => {
       awards.push({ event, detail });
       return { ...EMPTY_AWARD };
@@ -117,6 +133,133 @@ export function award(kit, event, detail, { cookie = () => document.cookie, onMi
     .then(() => kit.award(event, detail))
     .catch((err) => console.warn(`[kit] award ${event} failed:`, err && err.message ? err.message : err)));
   return true;
+}
+
+// ---- tile summary: which katas this learner practised and completed ----
+
+const uniqueKnown = (list, ids) => {
+  if (!Array.isArray(list)) return [];
+  const out = [];
+  for (const id of list) if (typeof id === 'string' && ids.includes(id) && !out.includes(id)) out.push(id);
+  return out;
+};
+
+/** Sanitises a stored `{ viewed, completed }` to unique ids from `ids`; anything else is empty. */
+export function kataProgress(state, ids) {
+  const s = state && typeof state === 'object' ? state : {};
+  return { viewed: uniqueKnown(s.viewed, ids), completed: uniqueKnown(s.completed, ids) };
+}
+
+/** The union of two progress records, list by list. */
+export function mergeKataProgress(a, b) {
+  const union = (x, y) => [...new Set([...(x || []), ...(y || [])])];
+  return { viewed: union(a.viewed, b.viewed), completed: union(a.completed, b.completed) };
+}
+
+/**
+ * The save revision: completions dominate (at most 5 katas can be viewed), so the SQL's
+ * keep-the-higher-rev rule can never replace a state with more completions by one with
+ * fewer, whichever device or replay writes last.
+ */
+export function kataRev(progress) {
+  return 100 * progress.completed.length + progress.viewed.length;
+}
+
+/** The launcher headline: completions once there are any, otherwise katas practised. */
+export function kataSummary(progress, total) {
+  const c = progress.completed.length;
+  const v = progress.viewed.length;
+  const headline = c > 0 ? `${c} of ${total} katas completed` : `${v} ${v === 1 ? 'kata' : 'katas'} practised`;
+  return { headline, percent: total > 0 ? Math.round((100 * c) / total) : 0 };
+}
+
+/**
+ * One serialized publisher (never calls `publish` while an earlier call is unsettled, so
+ * the kit's debounce never strands a promise): `request(snapshot)` keeps the newest
+ * snapshot and starts a run if none is going; a run publishes, then repeats only if a
+ * newer snapshot arrived meanwhile. Only the run is tracked (see flushAwards); it never
+ * rejects. `request` resolves when a run that included the snapshot has finished.
+ */
+export function createPublisher(publish, { track = trackPending } = {}) {
+  let latest;
+  let waiting = false;
+  let running = null;
+  function run() {
+    const p = (async () => {
+      try {
+        while (waiting) {
+          const snapshot = latest;
+          waiting = false;
+          latest = undefined;
+          try {
+            await publish(snapshot);
+          } catch (err) {
+            console.warn('[kit] save failed:', err && err.message ? err.message : err);
+          }
+        }
+      } finally {
+        running = null; // same turn as the loop's last check: a later request starts a new run
+      }
+    })();
+    return p;
+  }
+  return {
+    request(snapshot) {
+      latest = snapshot;
+      waiting = true;
+      if (!running) running = track(run());
+      return running;
+    },
+    busy: () => running !== null,
+  };
+}
+
+/**
+ * The learner's kata progress for the launcher tile. `record(kind, id)` adds a viewed or
+ * completed kata; `start()` is the first `kit.load()` and merge, then one publish if
+ * anything was recorded meanwhile (runs start only after it). Every publish is
+ * read-merge-write (set sizes are no safe revision for sets): load the stored state,
+ * union it in, save with the completion-dominant rev. Refused under an account switch,
+ * like `award`.
+ */
+export function kataProgressSync(kit, { ids, cookie = () => document.cookie, onMismatch = () => {}, track = trackPending } = {}) {
+  let progress = { viewed: [], completed: [] };
+  let loaded = false;
+  let recorded = false;
+  const guard = () => {
+    if (sameAccount(kit, cookie())) return true;
+    onMismatch();
+    return false;
+  };
+  const publisher = createPublisher(async () => {
+    if (!guard()) return;
+    const stored = kataProgress(await kit.load(), ids); // read before merging: events may land during the load
+    progress = mergeKataProgress(progress, stored);
+    if (!guard()) return;
+    const snapshot = progress;
+    await kit.save({ rev: kataRev(snapshot), viewed: snapshot.viewed, completed: snapshot.completed }, kataSummary(snapshot, ids.length));
+  }, { track });
+  return {
+    async start() {
+      try {
+        const stored = kataProgress(await kit.load(), ids);
+        progress = mergeKataProgress(progress, stored);
+      } catch {
+        // publish what this page recorded; the next run reads the stored state again
+      }
+      loaded = true;
+      if (recorded) await publisher.request();
+    },
+    record(kind, id) {
+      if (!ids.includes(id)) return;
+      const list = kind === 'completed' ? 'completed' : 'viewed';
+      if (progress[list].includes(id)) return; // nothing new to publish
+      progress = { ...progress, [list]: [...progress[list], id] };
+      recorded = true;
+      if (loaded) publisher.request();
+    },
+    progress: () => progress,
+  };
 }
 
 /** Number of tracked calls (awards, kit start-up) not yet settled. */

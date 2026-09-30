@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { award, flushAwards, furthestStepTracker, homeRoomHandler, HOME_ROOM_URL, initKit, isDevHost, mockKit, pendingAwardCount, sameAccount, sessionUserId, trackPending, GAME } from '../public/js/kit.js';
+import { award, createPublisher, flushAwards, furthestStepTracker, homeRoomHandler, HOME_ROOM_URL, initKit, isDevHost, kataProgress, kataProgressSync, kataRev, kataSummary, mergeKataProgress, mockKit, pendingAwardCount, sameAccount, sessionUserId, trackPending, GAME } from '../public/js/kit.js';
 
 function jwt(sub) {
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -311,4 +311,314 @@ test('a stale "still here" timer from an earlier departure does not end a newer 
   assert.equal(onClick.isLeaving(), true, 'the second departure is still active');
   await onClick();
   assert.equal(assigned.length, 2);
+});
+
+// ---- launcher tile progress (work order 2026-09-30-tile-summaries-and-copy) ----
+
+const IDS = ['seisan', 'seiunchin', 'naihanchi', 'wansu', 'chinto'];
+
+/**
+ * The portal side of `save_progress` / `game_progress`: one row per learner and game; a save
+ * whose rev is lower than the stored state's rev is dropped and answers false
+ * (0007_progress_revision_guard.sql). `offline` makes every request fail.
+ */
+function fakePortal() {
+  return {
+    row: null,
+    offline: false,
+    saveCalls: 0,
+    async select() {
+      if (this.offline) throw new Error('network');
+      return this.row ? [structuredClone(this.row)] : [];
+    },
+    async saveProgress({ p_state, p_summary, p_rev }) {
+      this.saveCalls++;
+      if (this.offline) throw new Error('network');
+      const stored = this.row && typeof this.row.state.rev === 'number' ? this.row.state.rev : 0;
+      if (this.row && p_rev < stored) return false;
+      this.row = { state: structuredClone(p_state), summary: structuredClone(p_summary) };
+      return true;
+    },
+  };
+}
+
+/**
+ * A port of ts-kit.js's load / save / flush and its start-up replay (public/kit/v1/ts-kit.js
+ * lines 74-100 and 138), with a shorter debounce: save() replaces the pending snapshot and
+ * cancels the earlier timer without settling the earlier call's promise; flush settles
+ * (clean) when the server answered, dropped or not, and marks the cache dirty on failure;
+ * load() prefers a dirty local cache, then the server, then the local cache.
+ */
+function fakeKit(portal, storage = new Map(), { debounceMs = 5 } = {}) {
+  const cacheKey = 'tskit:katas:u1';
+  const ls = (val) => {
+    if (val === undefined) return storage.has(cacheKey) ? structuredClone(storage.get(cacheKey)) : null;
+    storage.set(cacheKey, structuredClone(val));
+  };
+  let saveTimer = null;
+  let pending = null;
+  const calls = { save: 0, load: 0 };
+  function flush() {
+    if (!pending) return Promise.resolve();
+    const p = pending; pending = null;
+    const rev = p.state && typeof p.state.rev === 'number' ? p.state.rev : 0;
+    return portal.saveProgress({ p_state: p.state, p_summary: p.summary, p_rev: rev })
+      .then(() => { ls({ state: p.state, summary: p.summary }); })
+      .catch(() => { ls({ state: p.state, summary: p.summary, dirty: true }); });
+  }
+  const kit = {
+    user: { id: 'u1' },
+    calls,
+    load() {
+      calls.load++;
+      return portal.select().then((rows) => {
+        const server = rows && rows[0]; const local = ls();
+        if (local && local.dirty) return local.state;
+        if (server) { ls({ state: server.state, summary: server.summary }); return server.state; }
+        return local ? local.state : {};
+      }).catch(() => { const local = ls(); return local ? local.state : {}; });
+    },
+    save(state, summary) {
+      calls.save++;
+      pending = { state, summary: summary || {} };
+      ls({ state, summary: summary || {}, dirty: true });
+      if (saveTimer) clearTimeout(saveTimer);
+      return new Promise((resolve) => { saveTimer = setTimeout(() => { flush().then(resolve, resolve); }, debounceMs); });
+    },
+    award: async () => ({}),
+  };
+  // TSKit.init: replay a dirty snapshot before any class code runs.
+  kit.init = () => {
+    const local = ls();
+    if (local && local.dirty) pending = { state: local.state, summary: local.summary };
+    return flush().then(() => kit);
+  };
+  return kit;
+}
+
+/** A private pending-work set, so these tests do not touch the module's own. */
+const localTrack = () => {
+  const set = new Set();
+  const track = (p) => {
+    const t = Promise.resolve(p).then(() => undefined, () => undefined).finally(() => set.delete(t));
+    set.add(t);
+    return p;
+  };
+  return { set, track };
+};
+const idle = async (set) => { while (set.size) await Promise.allSettled([...set]); };
+
+test('kataProgress keeps unique known ids only; anything else is empty', () => {
+  assert.deepEqual(kataProgress(null, IDS), { viewed: [], completed: [] });
+  assert.deepEqual(kataProgress({ viewed: 'seisan' }, IDS), { viewed: [], completed: [] });
+  assert.deepEqual(
+    kataProgress({ rev: 3, viewed: ['seisan', 'seisan', 'kusanku', 7, 'chinto'], completed: ['wansu', null] }, IDS),
+    { viewed: ['seisan', 'chinto'], completed: ['wansu'] },
+  );
+});
+
+test('mergeKataProgress is the union of each list', () => {
+  assert.deepEqual(
+    mergeKataProgress({ viewed: ['seisan'], completed: ['seisan'] }, { viewed: ['chinto', 'seisan'], completed: [] }),
+    { viewed: ['seisan', 'chinto'], completed: ['seisan'] },
+  );
+});
+
+test('kataSummary: practised until a completion, then completions of the total', () => {
+  assert.deepEqual(kataSummary({ viewed: [], completed: [] }, 5), { headline: '0 katas practised', percent: 0 });
+  assert.deepEqual(kataSummary({ viewed: ['seisan'], completed: [] }, 5), { headline: '1 kata practised', percent: 0 });
+  assert.deepEqual(kataSummary({ viewed: ['seisan', 'chinto'], completed: [] }, 5), { headline: '2 katas practised', percent: 0 });
+  assert.deepEqual(kataSummary({ viewed: ['seisan'], completed: ['seisan'] }, 5), { headline: '1 of 5 katas completed', percent: 20 });
+  assert.deepEqual(kataSummary({ viewed: IDS, completed: IDS.slice(0, 3) }, 5), { headline: '3 of 5 katas completed', percent: 60 });
+});
+
+test('kataRev: one completion outranks any number of practised-only katas', () => {
+  assert.equal(kataRev({ viewed: ['seisan'], completed: ['seisan'] }), 101);
+  assert.equal(kataRev({ viewed: ['seisan', 'chinto'], completed: [] }), 2);
+  assert.ok(kataRev({ viewed: [], completed: ['seisan'] }) > kataRev({ viewed: IDS, completed: [] }));
+});
+
+test('createPublisher never calls kit.save while an earlier call is unsettled; rapid requests end with the newest snapshot saved', async () => {
+  const portal = fakePortal();
+  const kit = fakeKit(portal);
+  const { set, track } = localTrack();
+  let inFlight = 0;
+  let maxInFlight = 0;
+  const pub = createPublisher(async (n) => {
+    inFlight++;
+    maxInFlight = Math.max(maxInFlight, inFlight);
+    try {
+      await kit.save({ rev: n, n }, { headline: `n=${n}` });
+    } finally {
+      inFlight--;
+    }
+  }, { track });
+  const done = [];
+  for (let n = 1; n <= 6; n++) {
+    done.push(pub.request(n));
+    assert.ok(set.size <= 1, 'only the run is tracked');
+    await new Promise((r) => setTimeout(r, 1));
+  }
+  await Promise.all(done);
+  await idle(set);
+  assert.equal(maxInFlight, 1);
+  assert.equal(portal.row.state.n, 6, 'the newest snapshot reached the server');
+  assert.equal(portal.row.summary.headline, 'n=6');
+  assert.equal(set.size, 0, 'nothing left pending');
+  assert.equal(pub.busy(), false);
+  assert.ok(kit.calls.save < 6, 'requests during a run were coalesced');
+});
+
+test('createPublisher: a failing publish still settles the run and clears the pending set', async () => {
+  const { set, track } = localTrack();
+  const warn = console.warn;
+  console.warn = () => {};
+  try {
+    const pub = createPublisher(async () => { throw new Error('boom'); }, { track });
+    await pub.request(1);
+    await idle(set);
+    assert.equal(set.size, 0);
+    assert.equal(pub.busy(), false);
+  } finally {
+    console.warn = warn;
+  }
+});
+
+/** One device's session: kit init (with its replay), the first load, the given events. */
+async function session(portal, storage, events) {
+  const kit = await fakeKit(portal, storage).init();
+  kit.mock = true; // sameAccount without a cookie in node; the account guard has its own test
+  const { set, track } = localTrack();
+  const sync = kataProgressSync(kit, { ids: IDS, cookie: () => '', track });
+  const started = sync.start();
+  for (const [kind, id] of events) sync.record(kind, id);
+  await started;
+  await idle(set);
+  return { kit, sync };
+}
+
+const A_SEISAN = [['viewed', 'seisan'], ['completed', 'seisan']];
+const B_TWO = [['viewed', 'chinto'], ['viewed', 'wansu']];
+
+test('A (completed Seisan, rev 101) then B (viewed two): the server keeps the completion and holds both', async () => {
+  const portal = fakePortal();
+  await session(portal, new Map(), A_SEISAN);
+  assert.equal(portal.row.state.rev, 101);
+  await session(portal, new Map(), B_TWO);
+  assert.deepEqual(portal.row.state.completed, ['seisan']);
+  assert.deepEqual([...portal.row.state.viewed].sort(), ['chinto', 'seisan', 'wansu']);
+  assert.equal(portal.row.summary.headline, '1 of 5 katas completed');
+});
+
+test('B (viewed two, rev 2) then A (completed Seisan): the server holds both', async () => {
+  const portal = fakePortal();
+  await session(portal, new Map(), B_TWO);
+  assert.equal(portal.row.state.rev, 2);
+  assert.equal(portal.row.summary.headline, '2 katas practised');
+  await session(portal, new Map(), A_SEISAN);
+  assert.deepEqual(portal.row.state.completed, ['seisan']);
+  assert.deepEqual([...portal.row.state.viewed].sort(), ['chinto', 'seisan', 'wansu']);
+  assert.equal(portal.row.summary.headline, '1 of 5 katas completed');
+});
+
+test('equal set sizes on two devices (one viewed each) end with both on the server', async () => {
+  const portal = fakePortal();
+  await session(portal, new Map(), [['viewed', 'seisan']]);
+  await session(portal, new Map(), [['viewed', 'chinto']]);
+  assert.deepEqual([...portal.row.state.viewed].sort(), ['chinto', 'seisan']);
+  assert.equal(portal.row.summary.headline, '2 katas practised');
+});
+
+test("B's offline dirty snapshot, replayed by the kit at start-up, cannot replace A's saved completion", async () => {
+  const portal = fakePortal();
+  const deviceB = new Map();
+  portal.offline = true;
+  await session(portal, deviceB, B_TWO); // B's save fails: its kit cache stays dirty (rev 2)
+  assert.equal(deviceB.get('tskit:katas:u1').dirty, true);
+  portal.offline = false;
+  await session(portal, new Map(), A_SEISAN); // A saves rev 101
+  // B reconnects: TSKit.init replays the dirty rev-2 snapshot before any class code runs.
+  const kit = await fakeKit(portal, deviceB).init();
+  assert.deepEqual(portal.row.state.completed, ['seisan'], 'the replay was dropped (2 < 101)');
+  assert.equal(portal.row.summary.headline, '1 of 5 katas completed');
+  // B's class code then loads, merges and, on its next event, publishes the union.
+  kit.mock = true;
+  const { set, track } = localTrack();
+  const sync = kataProgressSync(kit, { ids: IDS, cookie: () => '', track });
+  await sync.start();
+  assert.deepEqual(sync.progress().completed, ['seisan']);
+  sync.record('viewed', 'naihanchi');
+  await idle(set);
+  assert.deepEqual(portal.row.state.completed, ['seisan']);
+  assert.deepEqual([...portal.row.state.viewed].sort(), ['naihanchi', 'seisan']);
+  assert.equal(portal.row.summary.headline, '1 of 5 katas completed');
+});
+
+test('kataProgressSync: events before the first load are merged in, then published once', async () => {
+  const portal = fakePortal();
+  portal.row = { state: { rev: 1, viewed: ['wansu'], completed: [] }, summary: {} };
+  const kit = await fakeKit(portal).init();
+  kit.mock = true;
+  let release;
+  const gate = new Promise((r) => { release = r; });
+  const load = kit.load.bind(kit);
+  kit.load = () => gate.then(load);
+  const { set, track } = localTrack();
+  const sync = kataProgressSync(kit, { ids: IDS, cookie: () => '', track });
+  const started = track(sync.start()); // main.js tracks the whole start-up
+  sync.record('viewed', 'seisan');
+  sync.record('viewed', 'chinto');
+  await new Promise((r) => setTimeout(r, 20));
+  assert.equal(portal.saveCalls, 0, 'no run before the first load resolved');
+  assert.equal(set.size, 1, 'the start-up is pending work');
+  release();
+  await started;
+  await idle(set);
+  assert.equal(portal.saveCalls, 1, 'one publish');
+  assert.deepEqual([...portal.row.state.viewed].sort(), ['chinto', 'seisan', 'wansu']);
+  assert.equal(portal.row.summary.headline, '3 katas practised');
+});
+
+test('kataProgressSync: nothing recorded, nothing saved; a repeat or unknown kata is not republished', async () => {
+  const portal = fakePortal();
+  const kit = await fakeKit(portal).init();
+  kit.mock = true;
+  const { set, track } = localTrack();
+  const sync = kataProgressSync(kit, { ids: IDS, cookie: () => '', track });
+  await sync.start();
+  assert.equal(portal.saveCalls, 0);
+  sync.record('viewed', 'seisan');
+  await idle(set);
+  sync.record('viewed', 'seisan');
+  sync.record('viewed', 'kusanku'); // not a kata of this class
+  await idle(set);
+  assert.equal(portal.saveCalls, 1);
+});
+
+test('kataProgressSync refuses to save for a learner who is no longer signed in, and reports it', async () => {
+  const portal = fakePortal();
+  const kit = await fakeKit(portal).init();
+  const { set, track } = localTrack();
+  let mismatches = 0;
+  let cookie = cookieFor('u1');
+  const sync = kataProgressSync(kit, { ids: IDS, cookie: () => cookie, onMismatch: () => { mismatches++; }, track });
+  await sync.start();
+  sync.record('viewed', 'seisan');
+  await idle(set);
+  assert.equal(portal.row.summary.headline, '1 kata practised');
+  cookie = cookieFor('u2');
+  sync.record('viewed', 'chinto');
+  await idle(set);
+  assert.equal(mismatches, 1);
+  assert.equal(portal.row.summary.headline, '1 kata practised', 'nothing saved for the previous learner');
+});
+
+test('mockKit: load and save round-trip in memory, saves are recorded, a lower rev is dropped', async () => {
+  const win = {};
+  const kit = mockKit(win);
+  assert.deepEqual(await kit.load(), {});
+  await kit.save({ rev: 101, viewed: ['seisan'], completed: ['seisan'] }, { headline: '1 of 5 katas completed' });
+  await kit.save({ rev: 2, viewed: ['chinto', 'wansu'], completed: [] }, { headline: '2 katas practised' });
+  assert.deepEqual(await kit.load(), { rev: 101, viewed: ['seisan'], completed: ['seisan'] });
+  assert.deepEqual(win.__kitSaves.map((s) => s.summary.headline), ['1 of 5 katas completed', '2 katas practised']);
 });

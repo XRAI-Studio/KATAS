@@ -22,7 +22,8 @@ npm run build
 ```
 
 On `localhost` the page gate lets everything through and `public/js/kit.js` returns a mock
-kit that records awards on `window.__kitAwards`; the e2e reads them. `window.__katasDev`
+kit that records awards on `window.__kitAwards` and saves on `window.__kitSaves` (keeping one
+stored state in memory, so load and save round-trip); the e2e reads them. `window.__katasDev`
 (dev hosts only) exposes the player for the e2e.
 
 ## Portal integration
@@ -39,6 +40,33 @@ Awards (all fire-and-forget; the portal caps per event and per day):
 | `kata_view` | a kata is loaded (`{ kata }`) |
 | `kata_step` | the learner reaches a step further than any reached before in this page session for that kata (`{ kata, step }`) |
 | `kata_complete` | playback (not a seek) reaches the end of the kata (`{ kata }`) |
+
+Launcher tile (`public/js/kit.js`, `kataProgressSync`): the viewer keeps
+`{ viewed, completed }` kata ids with the portal through `kit.load()` / `kit.save()`, and
+the tile shows `"<v> kata(s) practised"` until a kata is completed, then
+`"<c> of 5 katas completed"`. Viewing (`kata_view`) or completing (`kata_complete`) a kata
+adds it and publishes, only when the award was not refused. The rules:
+
+- One serialized publisher: `kit.save()` is never called while an earlier call is
+  unsettled (the real kit's debounce cancels the earlier timer without settling its
+  promise). Only the publisher's run is tracked for Return to Home Room.
+- Read-merge-write: every publish first loads the stored state and unions it in.
+- Completion-dominant revision: `rev = 100 × completed + viewed`. The portal keeps the
+  higher rev, so no write (including the kit's own start-up replay of an unsent snapshot)
+  can replace a state with more completions by one with fewer.
+- Start-up is one tracked operation: kit init, the first load, the merge and the first
+  publish, so Return to Home Room waits for them within its 2 s bound. Katas viewed while
+  the first load is out are merged in and published once it resolves.
+- Account-guarded like awards: nothing is saved for a learner who is no longer signed in.
+
+Accepted residual: the kit replays an unsent snapshot before any viewer code runs, and
+that replay can replace a stored state of **equal** completion count but different katas
+(device A, offline, completes Chinto; device B saves a Seisan completion; A reconnects).
+The tile then reads "1 of 5" where the true union is 2, until the dropped kata is
+completed again on any device. It needs a failed save followed by another device's save
+before reconnecting, and it only ever undercounts: the headline never drops below the best
+single device's count and never shows "practised" after a completion. XP is unaffected
+(awards are separate). Closing it fully needs a server-side union RPC or a kit change.
 
 Known gap: the portal seed also lists `quiz_correct`, `quiz_perfect` and `journal_entry`
 for this class. The viewer has no quiz or journal yet (quiz content exists on the unmerged

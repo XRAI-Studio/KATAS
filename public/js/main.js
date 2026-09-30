@@ -5,7 +5,7 @@ import { buildTimeline, samplePose, stepAt, Player } from './player.js';
 import { initUI } from './ui.js';
 import { createCoach } from './coach.js';
 import { initBunkai } from './bunkai.js';
-import { initKit, award as kitAward, furthestStepTracker, homeRoomHandler, isDevHost, sameAccount, trackPending } from './kit.js';
+import { initKit, award as kitAward, furthestStepTracker, homeRoomHandler, isDevHost, kataProgressSync, sameAccount, trackPending } from './kit.js';
 
 const KATAS = [
   { file: 'seisan.json', displayName: 'Seisan (十三)' },
@@ -14,6 +14,7 @@ const KATAS = [
   { file: 'wansu.json', displayName: 'Wansu (汪楫)' },
   { file: 'chinto.json', displayName: 'Chinto (鎮東)' },
 ];
+const KATA_IDS = KATAS.map((k) => k.file.replace(/\.json$/, ''));
 
 // "Return to Home Room" works on every screen (including the sign-in and error banners),
 // so it is wired before the kit starts: it waits up to 2 s for awards in flight, then
@@ -22,14 +23,36 @@ let pauseForLeave = () => {};
 const homeRoom = homeRoomHandler({ beforeLeave: () => pauseForLeave() });
 document.getElementById('home-room').addEventListener('click', homeRoom);
 
-// Portal kit first (class standard rule 3): no user means the kit has already started
-// the redirect to the portal login; a missing kit script gets a retry control. The
-// kit's start-up replays awards queued offline, so a departure waits for it too, and a
-// learner who is leaving does not get the viewer booted under them.
-const kitStart = await trackPending(initKit());
-homeRoom.whenStaying(() => start(kitStart));
+// The kit captured one learner's token at init. If the portal signs someone else in (or
+// out) under this open tab, stop awarding and saving and reload through the gate so the
+// kit and the step tracker start fresh for whoever is signed in now.
+let restarting = false;
+function restart() {
+  if (restarting) return;
+  restarting = true;
+  const banner = document.getElementById('error-banner');
+  banner.textContent = 'The signed-in account changed. Reloading…';
+  banner.classList.remove('hidden');
+  location.reload();
+}
 
-function start(kitStart) {
+// Portal kit first (class standard rule 3): no user means the kit has already started
+// the redirect to the portal login; a missing kit script gets a retry control. Start-up
+// is one tracked operation: kit init (which replays awards queued offline), the first
+// kit.load() of the tile progress, its merge and the first publish, so a departure waits
+// for all of it (bounded), and a learner who is leaving does not get the viewer booted
+// under them. The viewer boots as soon as the kit is ready; katas viewed while the first
+// load is out are merged in and published once it resolves.
+const startup = (async () => {
+  const kitStart = await initKit();
+  const sync = kitStart.kind === 'ready' ? kataProgressSync(kitStart.kit, { ids: KATA_IDS, onMismatch: restart }) : null;
+  return { kitStart, sync };
+})();
+trackPending(startup.then(({ sync }) => sync?.start()));
+const { kitStart, sync } = await startup;
+homeRoom.whenStaying(() => start(kitStart, sync));
+
+function start(kitStart, sync) {
 if (kitStart.kind !== 'ready') {
   const banner = document.getElementById('error-banner');
   banner.classList.remove('hidden');
@@ -45,29 +68,21 @@ if (kitStart.kind !== 'ready') {
     banner.appendChild(retry);
   }
 } else {
-  boot(kitStart.kit);
+  boot(kitStart.kit, sync);
 }
 }
 
-function boot(kit) {
+function boot(kit, sync) {
 const stepTracker = furthestStepTracker();
 let currentKata = null;
 
-// The kit captured one learner's token at init. If the portal signs someone else in (or
-// out) under this open tab, stop awarding and reload through the gate so the kit and the
-// step tracker start fresh for whoever is signed in now.
-let restarting = false;
-function restart() {
-  if (restarting) return;
-  restarting = true;
-  const banner = document.getElementById('error-banner');
-  banner.textContent = 'The signed-in account changed. Reloading…';
-  banner.classList.remove('hidden');
-  location.reload();
-}
+// Viewing and completing a kata also update the launcher tile's progress (kit.js
+// kataProgressSync), only when the award itself was not refused.
 function grant(event, detail) {
   if (restarting) return;
-  kitAward(kit, event, detail, { onMismatch: restart });
+  if (!kitAward(kit, event, detail, { onMismatch: restart })) return;
+  if (event === 'kata_view') sync?.record('viewed', detail.kata);
+  else if (event === 'kata_complete') sync?.record('completed', detail.kata);
 }
 function checkAccount() {
   if (!sameAccount(kit, document.cookie)) restart();
