@@ -222,10 +222,24 @@ test('every time jump fires onSeek with the clamped time: seek, seekStep, next/p
   p.prevStep();          assert.equal(seen.at(-1), tl.steps[0].start);
   p.seekStep(last);      assert.equal(seen.at(-1), tl.steps[last].start);
   const n = seen.length;
-  p.seek(tl.duration); p.play();                       // replay from the end goes through seek(0)
+  p.seek(tl.duration); p.play();                       // replay from the end tells the camera it jumped to 0
   assert.equal(seen.at(-1), 0); assert.equal(seen.length, n + 2);
   p.pause(); p.tick(0.1);                              // plain playback is not a seek
   assert.equal(seen.length, n + 2);
+});
+
+test('replay from the end announces the opening step as playback, so the coach can say it (KATAS-AVATAR-001)', () => {
+  const tl = buildTimeline(kata, POSES);
+  const steps = [];
+  const p = new Player(tl, { onStep: (s) => steps.push({ id: s.id, playing: p.playing }) });
+  p.play();
+  p.tick(tl.duration + 1);                  // play to the end
+  steps.length = 0;
+  p.play();                                 // replay
+  assert.equal(p.time, 0);
+  assert.deepEqual(steps, [], 'no step is consumed by the replay itself');
+  p.tick(0.01);
+  assert.deepEqual(steps, [{ id: tl.steps[0].id, playing: true }], 'the opening step fires from playback');
 });
 
 test('sampling is pure — same t gives identical pose', () => {

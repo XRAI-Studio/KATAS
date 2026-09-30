@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from '../lib/three/OrbitControls.js';
+import { presetEndpoints } from './camera-tween.js';
 
 // Okinawan dojo: 12m wide (x), 9m deep (z). Kamiza on the back wall (-z),
 // performer starts at the origin facing +z (toward the default camera).
@@ -239,15 +240,21 @@ export function initScene(canvas) {
 
   let tween = null;
   let onTweenEnd = () => {};
+  // The performer's chest, from every follow/rebase call (Follow on or off), so a
+  // Follow-mode preset can be applied where the performer stands now.
+  const chest = { x: 0, y: 0.9, z: 0.8 };
   function setCameraPreset(name) {
     const p = CAMERA_PRESETS[name];
     if (!p) return;
+    const end = presetEndpoints(p, following, chest);
     tween = {
       t: 0,
+      preset: p,
+      relative: following,   // Follow on: endpoints are recomputed from the performer each frame
       fromPos: camera.position.clone(),
-      toPos: new THREE.Vector3(...p.pos),
+      toPos: new THREE.Vector3(...end.pos),
       fromTarget: controls.target.clone(),
-      toTarget: new THREE.Vector3(...p.target),
+      toTarget: new THREE.Vector3(...end.target),
     };
   }
 
@@ -267,6 +274,10 @@ export function initScene(canvas) {
   controls.addEventListener('end', () => { suspended = false; trackedValid = false; });
   function setFollow(on) { following = !!on; trackedValid = false; }
   function rebaseFollow(pos) {
+    chest.x = pos.x; chest.y = pos.y; chest.z = pos.z;
+    // A preset glide owns the camera until it ends; its end re-acquires the performer
+    // (Codex KATAS-AVATAR-002), so a rebase requested meanwhile must not move it.
+    if (tween) { trackedValid = false; return; }
     if (following) {
       delta.subVectors(pos, controls.target);
       controls.target.copy(pos);
@@ -276,6 +287,7 @@ export function initScene(canvas) {
     trackedValid = true;
   }
   function follow(pos) {
+    chest.x = pos.x; chest.y = pos.y; chest.z = pos.z;
     if (!following || suspended || tween) { trackedValid = false; return; }
     if (!trackedValid) { rebaseFollow(pos); return; }
     delta.subVectors(pos, tracked);
@@ -290,6 +302,11 @@ export function initScene(canvas) {
     if (tween) {
       tween.t = Math.min(1, tween.t + dt * 2.2);
       const u = tween.t * tween.t * (3 - 2 * tween.t);
+      if (tween.relative) {
+        const end = presetEndpoints(tween.preset, true, chest);
+        tween.toPos.set(...end.pos);
+        tween.toTarget.set(...end.target);
+      }
       camera.position.lerpVectors(tween.fromPos, tween.toPos, u);
       controls.target.lerpVectors(tween.fromTarget, tween.toTarget, u);
       if (tween.t >= 1) { tween = null; trackedValid = false; onTweenEnd(); }

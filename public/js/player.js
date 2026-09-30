@@ -308,7 +308,15 @@ export class Player {
   get speed() { return this._speed; }
 
   play() {
-    if (this._time >= this.timeline.duration) this.seek(0); // replay from start
+    if (this._time >= this.timeline.duration) {
+      // Replay from the start. The time jumps without a step notification, so the first
+      // playback tick announces the opening step (the coach's first cue) as a playback
+      // step; the camera still hears about the jump (Codex KATAS-AVATAR-001).
+      this._time = 0;
+      this._playing = true;
+      this.onSeek(0);
+      return;
+    }
     this._playing = true;
   }
   pause() { this._playing = false; }
