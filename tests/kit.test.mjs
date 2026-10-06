@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { award, createPublisher, flushAwards, furthestStepTracker, homeRoomHandler, HOME_ROOM_URL, initKit, isDevHost, kataProgress, kataProgressSync, kataRev, kataSummary, mergeKataProgress, VERIFY_ATTEMPTS, mockKit, pendingAwardCount, sameAccount, sessionUserId, trackPending, GAME } from '../public/js/kit.js';
+import { award, createPublisher, flushAwards, furthestStepTracker, homeRoomHandler, HOME_ROOM_URL, initKit, isDevHost, isProgressUnavailable, kataProgress, kataProgressSync, kataRev, kataSummary, mergeKataProgress, VERIFY_ATTEMPTS, mockKit, pendingAwardCount, sameAccount, sessionUserId, trackPending, GAME } from '../public/js/kit.js';
 
 function jwt(sub) {
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -320,20 +320,23 @@ const IDS = ['seisan', 'seiunchin', 'naihanchi', 'wansu', 'chinto'];
 /**
  * The portal side of `save_progress` / `game_progress`: one row per learner and game; a save
  * whose rev is lower than the stored state's rev is dropped and answers false
- * (0007_progress_revision_guard.sql). `offline` makes every request fail.
+ * (0007_progress_revision_guard.sql). `offline` makes every request fail; `readsFail` only
+ * the progress reads, `savesFail` only the saves.
  */
 function fakePortal() {
   return {
     row: null,
     offline: false,
+    readsFail: false,
+    savesFail: false,
     saveCalls: 0,
     async select() {
-      if (this.offline) throw new Error('network');
+      if (this.offline || this.readsFail) throw new Error('network');
       return this.row ? [structuredClone(this.row)] : [];
     },
     async saveProgress({ p_state, p_summary, p_rev }) {
       this.saveCalls++;
-      if (this.offline) throw new Error('network');
+      if (this.offline || this.savesFail) throw new Error('network');
       const stored = this.row && typeof this.row.state.rev === 'number' ? this.row.state.rev : 0;
       if (this.row && p_rev < stored) return false;
       this.row = { state: structuredClone(p_state), summary: structuredClone(p_summary) };
@@ -347,7 +350,9 @@ function fakePortal() {
  * lines 74-100 and 138), with a shorter debounce: save() replaces the pending snapshot and
  * cancels the earlier timer without settling the earlier call's promise; flush settles
  * (clean) when the server answered, dropped or not, and marks the cache dirty on failure;
- * load() prefers a dirty local cache, then the server, then the local cache.
+ * load() prefers a dirty local cache, then the server, then the local cache. A failed read
+ * answers with the local cache, else `{}`, unless `load({ strict: true })`, which rejects
+ * with code "progress-unavailable" (portal plan 2026-10-06-kit-strict-load, section 1).
  */
 function fakeKit(portal, storage = new Map(), { debounceMs = 5 } = {}) {
   const cacheKey = 'tskit:katas:u1';
@@ -369,14 +374,18 @@ function fakeKit(portal, storage = new Map(), { debounceMs = 5 } = {}) {
   const kit = {
     user: { id: 'u1' },
     calls,
-    load() {
+    load(opts) {
       calls.load++;
       return portal.select().then((rows) => {
         const server = rows && rows[0]; const local = ls();
         if (local && local.dirty) return local.state;
         if (server) { ls({ state: server.state, summary: server.summary }); return server.state; }
         return local ? local.state : {};
-      }).catch(() => { const local = ls(); return local ? local.state : {}; });
+      }).catch(() => {
+        if (opts && opts.strict) throw Object.assign(new Error('progress unavailable'), { code: 'progress-unavailable' });
+        const local = ls();
+        return local ? local.state : {};
+      });
     },
     save(state, summary) {
       calls.save++;
@@ -579,10 +588,12 @@ test('equal set sizes on two devices (one viewed each) end with both on the serv
 test("B's offline dirty snapshot, replayed by the kit at start-up, cannot replace A's saved completion", async () => {
   const portal = fakePortal();
   const deviceB = new Map();
-  portal.offline = true;
-  await session(portal, deviceB, B_TWO); // B's save fails: its kit cache stays dirty (rev 2)
+  // B reads (strict reads succeed) but its save fails: its kit cache stays dirty (rev 2).
+  // (A save is never built after a failed read; see the strict-read tests below.)
+  portal.savesFail = true;
+  await session(portal, deviceB, B_TWO);
   assert.equal(deviceB.get('tskit:katas:u1').dirty, true);
-  portal.offline = false;
+  portal.savesFail = false;
   await session(portal, new Map(), A_SEISAN); // A saves rev 101
   // B reconnects: TSKit.init replays the dirty rev-2 snapshot before any class code runs.
   const kit = await fakeKit(portal, deviceB).init();
@@ -609,7 +620,7 @@ test('kataProgressSync: events before the first load are merged in, then publish
   let release;
   const gate = new Promise((r) => { release = r; });
   const load = kit.load.bind(kit);
-  kit.load = () => gate.then(load);
+  kit.load = (opts) => gate.then(() => load(opts));
   const { set, track } = localTrack();
   const sync = kataProgressSync(kit, { ids: IDS, cookie: () => '', track });
   const started = track(sync.start()); // main.js tracks the whole start-up
@@ -658,6 +669,194 @@ test('kataProgressSync refuses to save for a learner who is no longer signed in,
   await idle(set);
   assert.equal(mismatches, 1);
   assert.equal(portal.row.summary.headline, '1 kata practised', 'nothing saved for the previous learner');
+});
+
+// ---- strict reads (portal plan 2026-10-06-kit-strict-load, STRICT-001 / STRICT-005) ----
+
+/** Retry timers under test control: `fire()` runs every pending timer, as if its delay passed. */
+function retryTimers() {
+  const due = new Map();
+  const scheduled = [];
+  let next = 1;
+  return {
+    setTimer: (fn, ms) => { const id = next++; due.set(id, fn); scheduled.push(ms); return id; },
+    clearTimer: (id) => { due.delete(id); },
+    scheduled,
+    pending: () => due.size,
+    fire: () => { const run = [...due.values()]; due.clear(); for (const fn of run) fn(); },
+  };
+}
+
+/** A window with only addEventListener, and `dispatch(type)` to raise an event. */
+function fakeWin() {
+  const listeners = {};
+  return {
+    addEventListener: (type, fn) => { (listeners[type] ||= []).push(fn); },
+    dispatch: (type) => { for (const fn of listeners[type] || []) fn(); },
+  };
+}
+
+/** A sync on a fresh device with injected retry timers and window; console.warn silenced. */
+async function strictSync(portal) {
+  const kit = await fakeKit(portal, new Map()).init();
+  kit.mock = true;
+  const { set, track } = localTrack();
+  const timers = retryTimers();
+  const win = fakeWin();
+  const sync = kataProgressSync(kit, { ids: IDS, cookie: () => '', track, win, setTimer: timers.setTimer, clearTimer: timers.clearTimer });
+  return { kit, set, timers, win, sync };
+}
+async function quietly(fn) {
+  const warn = console.warn;
+  console.warn = () => {};
+  try { await fn(); } finally { console.warn = warn; }
+}
+
+test('isProgressUnavailable recognises only the strict-read rejection', () => {
+  assert.equal(isProgressUnavailable(Object.assign(new Error('progress unavailable'), { code: 'progress-unavailable' })), true);
+  assert.equal(isProgressUnavailable(new Error('network')), false);
+  assert.equal(isProgressUnavailable(null), false);
+  assert.equal(isProgressUnavailable(undefined), false);
+});
+
+test('every progress read is strict', async () => {
+  const portal = fakePortal();
+  const { kit, set, sync } = await strictSync(portal);
+  const seen = [];
+  const load = kit.load.bind(kit);
+  kit.load = (opts) => { seen.push(opts); return load(opts); };
+  await sync.start();
+  sync.record('viewed', 'seisan');
+  await idle(set);
+  assert.equal(seen.length, 3, 'start, the read before merging, the read-back');
+  for (const opts of seen) assert.deepEqual(opts, { strict: true });
+});
+
+test('disjoint equal revs: a device whose reads fail saves nothing, then publishes the union once reads recover (STRICT-001)', async () => {
+  await quietly(async () => {
+    const portal = fakePortal();
+    portal.row = { state: { rev: 1, viewed: ['seisan'], completed: [] }, summary: { headline: '1 kata practised' } };
+    const { set, timers, sync } = await strictSync(portal);
+    portal.readsFail = true;
+    await sync.start();
+    assert.equal(timers.pending(), 0, 'nothing recorded yet: nothing to retry');
+    sync.record('viewed', 'chinto'); // rev 1 too: saved now, it would replace Seisan
+    await idle(set);
+    assert.equal(portal.saveCalls, 0, 'no save after a failed read');
+    assert.deepEqual(portal.row.state.viewed, ['seisan']);
+    assert.equal(timers.pending(), 1, 'the failed run armed the retry');
+    portal.readsFail = false;
+    timers.fire();
+    await idle(set);
+    assert.equal(portal.saveCalls, 1);
+    assert.equal(portal.row.state.rev, 2);
+    assert.deepEqual([...portal.row.state.viewed].sort(), ['chinto', 'seisan']);
+    assert.deepEqual(portal.row.state.completed, []);
+    assert.equal(portal.row.summary.headline, '2 katas practised');
+    assert.equal(timers.pending(), 0, 'cleared by the successful publish');
+  });
+});
+
+test('a kata recorded while the first read is out, which then fails, is published by the timed retry alone (STRICT-005)', async () => {
+  await quietly(async () => {
+    const portal = fakePortal();
+    portal.row = { state: { rev: 1, viewed: ['seisan'], completed: [] }, summary: {} };
+    const { kit, set, timers, sync } = await strictSync(portal);
+    let release;
+    const gate = new Promise((r) => { release = r; });
+    const load = kit.load.bind(kit);
+    kit.load = (opts) => gate.then(() => load(opts));
+    const started = sync.start();
+    sync.record('viewed', 'chinto');
+    portal.readsFail = true;
+    release();
+    await started;
+    await idle(set);
+    assert.equal(portal.saveCalls, 0, 'the failed first read published nothing');
+    assert.deepEqual(sync.progress().viewed, ['chinto'], 'the recorded kata is kept');
+    assert.deepEqual(timers.scheduled, [5000], 'the failed start-up read armed the retry');
+    portal.readsFail = false; // no further record, no online event
+    timers.fire();
+    await idle(set);
+    assert.equal(portal.saveCalls, 1);
+    assert.deepEqual([...portal.row.state.viewed].sort(), ['chinto', 'seisan']);
+    assert.equal(portal.row.state.rev, 2);
+    assert.equal(timers.pending(), 0);
+  });
+});
+
+test('the retry arms once per outage, backs off 5/10/20/30 s, fires at once on online, and clears on success', async () => {
+  await quietly(async () => {
+    const portal = fakePortal();
+    const { set, timers, win, sync } = await strictSync(portal);
+    portal.readsFail = true;
+    await sync.start();
+    sync.record('viewed', 'seisan');
+    await idle(set);
+    sync.record('viewed', 'chinto'); // a second failed run while the timer is pending
+    await idle(set);
+    assert.deepEqual(timers.scheduled, [5000], 'one timer, not restarted');
+    assert.equal(timers.pending(), 1);
+    timers.fire(); // still failing
+    await idle(set);
+    assert.deepEqual(timers.scheduled, [5000, 10000]);
+    win.dispatch('online'); // still failing: retried at once, then re-armed
+    await idle(set);
+    assert.deepEqual(timers.scheduled, [5000, 10000, 20000]);
+    assert.equal(timers.pending(), 1);
+    timers.fire();
+    await idle(set);
+    timers.fire();
+    await idle(set);
+    assert.deepEqual(timers.scheduled, [5000, 10000, 20000, 30000, 30000], 'the last delay repeats');
+    assert.equal(portal.saveCalls, 0);
+    portal.readsFail = false;
+    win.dispatch('online');
+    await idle(set);
+    assert.equal(portal.saveCalls, 1, 'online published at once');
+    assert.equal(timers.pending(), 0, 'cleared on success');
+    assert.deepEqual([...portal.row.state.viewed].sort(), ['chinto', 'seisan']);
+    win.dispatch('online'); // not armed: nothing happens
+    await idle(set);
+    assert.equal(portal.saveCalls, 1);
+    portal.readsFail = true; // a new outage starts the backoff again
+    sync.record('viewed', 'wansu');
+    await idle(set);
+    assert.deepEqual(timers.scheduled.slice(5), [5000]);
+  });
+});
+
+test('a failed read-back after a save arms the retry, which reads, merges and verifies again', async () => {
+  await quietly(async () => {
+    const portal = fakePortal();
+    const { set, timers, sync } = await strictSync(portal);
+    await sync.start();
+    const save = portal.saveProgress.bind(portal);
+    portal.saveProgress = async (args) => { const r = await save(args); portal.readsFail = true; return r; };
+    sync.record('viewed', 'seisan');
+    await idle(set);
+    assert.equal(portal.saveCalls, 1);
+    assert.equal(timers.pending(), 1);
+    portal.saveProgress = save;
+    portal.readsFail = false;
+    timers.fire();
+    await idle(set);
+    assert.equal(timers.pending(), 0);
+    assert.deepEqual(portal.row.state.viewed, ['seisan']);
+  });
+});
+
+test('an older kit that ignores { strict: true } answers a failed read with {} and the sync publishes as before', async () => {
+  const portal = fakePortal();
+  const { kit, set, timers, sync } = await strictSync(portal);
+  const load = kit.load.bind(kit);
+  kit.load = () => load(); // drops the option
+  portal.readsFail = true;
+  await sync.start();
+  sync.record('viewed', 'seisan');
+  await idle(set);
+  assert.equal(portal.saveCalls, 1, 'the previous behavior: published after a failed read');
+  assert.equal(timers.pending(), 0, 'no rejection, so no retry');
 });
 
 test('mockKit: load and save round-trip in memory, saves are recorded, a lower rev is dropped', async () => {

@@ -214,6 +214,47 @@ export function createPublisher(publish, { track = trackPending } = {}) {
   };
 }
 
+/** True for the kit's strict-read rejection: the stored progress could not be read. */
+export function isProgressUnavailable(err) {
+  return Boolean(err && err.code === 'progress-unavailable');
+}
+
+/** Saves per publish run before giving up until the next one (see kataProgressSync). */
+export const VERIFY_ATTEMPTS = 3;
+
+/** Delays between publish retries after a failed read; the last one repeats. */
+export const RETRY_DELAYS_MS = [5000, 10000, 20000, 30000];
+
+/**
+ * One retry timer: `arm()` schedules `fire` after the next delay of RETRY_DELAYS_MS unless a
+ * timer is already pending (so repeated failures never stack or restart it); the window
+ * `online` event fires at once while armed. `clear()` cancels the timer and resets the
+ * backoff. The pending timer is not tracked work: leaving never waits for it.
+ */
+export function createRetryScheduler(fire, { win = globalThis, setTimer = (fn, ms) => setTimeout(fn, ms), clearTimer = (t) => clearTimeout(t) } = {}) {
+  let timer = null;
+  let attempt = 0;
+  win.addEventListener?.('online', () => {
+    if (timer === null) return;
+    clearTimer(timer);
+    timer = null;
+    fire();
+  });
+  return {
+    arm() {
+      if (timer !== null) return;
+      const delay = RETRY_DELAYS_MS[Math.min(attempt++, RETRY_DELAYS_MS.length - 1)];
+      timer = setTimer(() => { timer = null; fire(); }, delay);
+    },
+    clear() {
+      if (timer !== null) clearTimer(timer);
+      timer = null;
+      attempt = 0;
+    },
+    armed: () => timer !== null,
+  };
+}
+
 /**
  * The learner's kata progress for the launcher tile. `record(kind, id)` adds a viewed or
  * completed kata; `start()` is the first `kit.load()` and merge, then one publish if
@@ -221,14 +262,30 @@ export function createPublisher(publish, { track = trackPending } = {}) {
  * read-merge-write (set sizes are no safe revision for sets): load the stored state,
  * union it in, save with the completion-dominant rev. Refused under an account switch,
  * like `award`.
+ *
+ * Every read is `kit.load({ strict: true })` (STRICT-001): when the read fails the kit
+ * rejects with `progress-unavailable` instead of answering with its cache or `{}`, and
+ * nothing is saved. A union built without the server's copy can carry the same rev as a
+ * disjoint stored state (server viewed=[A], this device viewed=[B], both rev 1) and the SQL
+ * accepts equal revs, so A would be lost. Ids recorded meanwhile stay here; one retry timer
+ * (RETRY_DELAYS_MS, and the window `online` event) re-requests a publish until a read
+ * succeeds, armed by both a failed start() read and a run whose read fails (STRICT-005),
+ * and cleared by a run that completes. An older kit ignores `{ strict: true }` (the
+ * previous behavior). `win`, `setTimer` and `clearTimer` are injectable for tests.
  */
-/** Saves per publish run before giving up until the next one (see kataProgressSync). */
-export const VERIFY_ATTEMPTS = 3;
-
-export function kataProgressSync(kit, { ids, cookie = () => document.cookie, onMismatch = () => {}, track = trackPending } = {}) {
+export function kataProgressSync(kit, {
+  ids,
+  cookie = () => document.cookie,
+  onMismatch = () => {},
+  track = trackPending,
+  win = globalThis,
+  setTimer,
+  clearTimer,
+} = {}) {
   let progress = { viewed: [], completed: [] };
   let loaded = false;
   let recorded = false;
+  const read = async () => kataProgress(await kit.load({ strict: true }), ids);
   const guard = () => {
     if (sameAccount(kit, cookie())) return true;
     onMismatch();
@@ -236,35 +293,55 @@ export function kataProgressSync(kit, { ids, cookie = () => document.cookie, onM
   };
   const holds = (stored, mine) =>
     mine.viewed.every((id) => stored.viewed.includes(id)) && mine.completed.every((id) => stored.completed.includes(id));
-  const publisher = createPublisher(async () => {
+  async function publishOnce() {
     if (!guard()) return;
-    let stored = kataProgress(await kit.load(), ids); // read before merging: events may land during the load
+    let stored = await read(); // read before merging: events may land during the load
     // Save, then read back: another device that read the same state and saved last (equal
     // rev) may have replaced this save; merge its state and save the union again, at most
     // VERIFY_ATTEMPTS times (Codex KATAS-001). A failed save normally leaves the kit's cache
     // dirty (which load() returns, so it counts as held) and the kit replays it later. A
-    // save that fails on both the network and the cache is lost: best effort, the learner
-    // views or completes that kata again (KSO-006). XP is unaffected (awards use the kit's
-    // award queue, not save).
+    // save that fails on both the network and the cache is lost, and so are ids recorded
+    // while reads fail if the learner leaves before a retry's read succeeds: best effort,
+    // the learner views or completes that kata again (KSO-006). XP is unaffected (awards
+    // use the kit's award queue, not save).
     for (let attempt = 0; attempt < VERIFY_ATTEMPTS; attempt++) {
       progress = mergeKataProgress(progress, stored);
       if (!guard()) return;
       const snapshot = progress;
       await kit.save({ rev: kataRev(snapshot), viewed: snapshot.viewed, completed: snapshot.completed }, kataSummary(snapshot, ids.length));
-      stored = kataProgress(await kit.load(), ids);
+      stored = await read();
       if (holds(stored, snapshot)) return;
     }
+  }
+  const publisher = createPublisher(async () => {
+    try {
+      await publishOnce();
+    } catch (err) {
+      // A failed read throws before any save (or at the read-back after one): retry later.
+      // createPublisher's catch logs it.
+      if (isProgressUnavailable(err)) retry.arm();
+      throw err;
+    }
+    retry.clear();
   }, { track });
+  const retry = createRetryScheduler(() => publisher.request(), { win, setTimer, clearTimer });
   return {
     async start() {
+      let ok = false;
       try {
-        const stored = kataProgress(await kit.load(), ids);
+        const stored = await read(); // ids may be recorded while this read is out
         progress = mergeKataProgress(progress, stored);
-      } catch {
-        // publish what this page recorded; the next run reads the stored state again
+        ok = true;
+      } catch (err) {
+        // Not ready: publish nothing built without the stored state. What this page
+        // recorded stays here; the retry publishes it once a read succeeds (a later
+        // record requests a run, whose failed read arms the retry).
+        console.warn('[kit] progress read failed:', err && err.message ? err.message : err);
       }
       loaded = true;
-      if (recorded) await publisher.request();
+      if (!recorded) return;
+      if (ok) await publisher.request();
+      else retry.arm();
     },
     record(kind, id) {
       if (!ids.includes(id)) return;
