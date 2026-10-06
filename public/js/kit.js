@@ -241,8 +241,11 @@ export function kataProgressSync(kit, { ids, cookie = () => document.cookie, onM
     let stored = kataProgress(await kit.load(), ids); // read before merging: events may land during the load
     // Save, then read back: another device that read the same state and saved last (equal
     // rev) may have replaced this save; merge its state and save the union again, at most
-    // VERIFY_ATTEMPTS times (Codex KATAS-001). A failed save leaves the kit's cache dirty,
-    // which load() returns, so it counts as held and the kit replays it later.
+    // VERIFY_ATTEMPTS times (Codex KATAS-001). A failed save normally leaves the kit's cache
+    // dirty (which load() returns, so it counts as held) and the kit replays it later. A
+    // save that fails on both the network and the cache is lost: best effort, the learner
+    // views or completes that kata again (KSO-006). XP is unaffected (awards use the kit's
+    // award queue, not save).
     for (let attempt = 0; attempt < VERIFY_ATTEMPTS; attempt++) {
       progress = mergeKataProgress(progress, stored);
       if (!guard()) return;
