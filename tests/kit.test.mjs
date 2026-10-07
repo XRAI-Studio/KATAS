@@ -426,11 +426,11 @@ test('kataProgress keeps unique known ids only; anything else is empty', () => {
   );
 });
 
-test('mergeKataProgress is the union of each list', () => {
-  assert.deepEqual(
-    mergeKataProgress({ viewed: ['seisan'], completed: ['seisan'] }, { viewed: ['chinto', 'seisan'], completed: [] }),
-    { viewed: ['seisan', 'chinto'], completed: ['seisan'] },
-  );
+test('mergeKataProgress without a catalogue is the union of each list, sorted, whatever the argument order (KATAS-CDS3-002)', () => {
+  const a = { viewed: ['seisan'], completed: ['seisan'] };
+  const b = { viewed: ['chinto', 'seisan'], completed: [] };
+  assert.deepEqual(mergeKataProgress(a, b), { viewed: ['chinto', 'seisan'], completed: ['seisan'] });
+  assert.deepEqual(mergeKataProgress(b, a), mergeKataProgress(a, b));
 });
 
 test('kataSummary: practised until a completion, then completions of the total', () => {
@@ -1107,10 +1107,12 @@ test('versioned: a failed strict read saves nothing and retries every 30 s until
     const server = { state: { rev: 1, viewed: ['seisan'], completed: [] }, readsFail: false };
     const { set, timers, win, calls, sync } = versionedSync(server);
     await sync.start();
+    await idle(set);
+    const before = calls.save; // start published the loaded progress (KATAS-CDS3-001)
     server.readsFail = true;
     sync.record('viewed', 'chinto');
     await idle(set);
-    assert.equal(calls.save, 0, 'no save built without the stored state (class standard 3.6)');
+    assert.equal(calls.save, before, 'no save built without the stored state (class standard 3.6)');
     assert.deepEqual(timers.scheduled, [SYNC_RETRY_MS]);
     server.readsFail = false;
     win.dispatch('online');
@@ -1210,4 +1212,62 @@ test('an old kit that returns { stored: "server" } still runs the read-back veri
   sync2.record('viewed', 'chinto');
   await idle(set);
   assert.equal(seen.length, 6, 'the verify loop again');
+});
+
+/**
+ * KATAS-CDS3-001: TSKit.init could not replay an unsent entry (still offline), and the strict
+ * load then succeeds: the kit answers the server's progress with that unsent work folded in.
+ * Nothing proves the server holds it, so start() publishes it and keeps retrying until a save
+ * reaches the server, with no new kata event (viewing the same kata again records nothing).
+ */
+function recoveredSync() {
+  const server = { state: {}, savesLocal: true };
+  const v = versionedSync(server);
+  const load = v.kit.load;
+  v.kit.load = async (opts) => kataSyncMerge(IDS)(await load(opts), { viewed: ['wansu'], completed: [] });
+  return { server, ...v };
+}
+
+test('versioned: start publishes recovered work and an online event sends it with no new kata (KATAS-CDS3-001)', async () => {
+  const { server, set, timers, win, calls, toasts, sync } = recoveredSync();
+  await sync.start();
+  await idle(set);
+  assert.equal(calls.save, 1, 'start published the loaded progress');
+  assert.deepEqual(server.state, {}, 'the first save stayed local');
+  assert.deepEqual(timers.scheduled, [SYNC_RETRY_MS]);
+  sync.record('viewed', 'wansu'); // the learner views it again: nothing new to record
+  await idle(set);
+  assert.equal(calls.save, 1);
+  server.savesLocal = false;
+  win.dispatch('online');
+  await idle(set);
+  assert.deepEqual(server.state, { rev: 1, viewed: ['wansu'], completed: [] });
+  assert.equal(timers.pending(), 0);
+  assert.deepEqual(toasts, [], 'the first load is not an arrival');
+});
+
+test('versioned: recovered work at start is sent by the 30 s timer alone (KATAS-CDS3-001)', async () => {
+  const { server, set, timers, calls, sync } = recoveredSync();
+  await sync.start();
+  await idle(set);
+  assert.equal(calls.save, 1);
+  server.savesLocal = false;
+  timers.fire();
+  await idle(set);
+  assert.equal(calls.save, 2);
+  assert.deepEqual(server.state, { rev: 1, viewed: ['wansu'], completed: [] });
+  assert.equal(timers.pending(), 0);
+});
+
+test('versioned: start publishes non-empty progress even when the load matches the server; empty progress is not saved', async () => {
+  const server = { state: { rev: 1, viewed: ['seisan'], completed: [] } };
+  const { set, calls, timers, sync } = versionedSync(server);
+  await sync.start();
+  await idle(set);
+  assert.equal(calls.save, 1, 'a load is no acknowledgement');
+  assert.equal(timers.pending(), 0, 'the save reached the server');
+  const empty = versionedSync({ state: {} });
+  await empty.sync.start();
+  await idle(empty.set);
+  assert.equal(empty.calls.save, 0);
 });

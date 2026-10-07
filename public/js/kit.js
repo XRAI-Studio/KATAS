@@ -164,13 +164,13 @@ export function kataProgress(state, ids) {
 
 /**
  * The union of two progress records, list by list. With `ids` the lists hold known ids only,
- * in catalogue order, so the result does not depend on the argument order; without, the
- * union keeps first-seen order.
+ * in catalogue order; without, the union is sorted lexicographically. Either way the result
+ * does not depend on the argument order (KATAS-CDS3-002).
  */
 export function mergeKataProgress(a, b, ids) {
   const union = (x, y) => {
     const all = [...new Set([...(Array.isArray(x) ? x : []), ...(Array.isArray(y) ? y : [])])];
-    return ids ? knownInOrder(all, ids) : all;
+    return ids ? knownInOrder(all, ids) : all.sort();
   };
   const p = a || {};
   const q = b || {};
@@ -460,7 +460,13 @@ export function kataProgressSync(kit, {
       }
       loaded = true;
       const broken = checkBroken();
-      if (!recorded) return;
+      // Versioned (KATAS-CDS3-001): the load may hold this device's unsent work that the
+      // kit's start-up replay could not send, and a load proves nothing reached the server,
+      // so any non-empty progress is published once; the retry keeps it going until a save
+      // answers "server". A repeat view of a loaded kata records nothing, so nothing else
+      // would send it.
+      const loadedWork = versioned && ok && (progress.viewed.length > 0 || progress.completed.length > 0);
+      if (!recorded && !loadedWork) return;
       if (ok) await publisher.request();
       else if (!broken) retry.arm();
     },
