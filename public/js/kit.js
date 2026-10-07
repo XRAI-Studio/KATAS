@@ -53,11 +53,24 @@ export function mockKit(win) {
  * Resolves to { kind: 'ready', kit } | { kind: 'redirecting' } | { kind: 'unavailable' }.
  * 'redirecting': the real kit found no session and has already started navigating to
  * the portal login. 'unavailable': the kit script did not load.
+ *
+ * With `ids` (the catalogue's kata ids, in order) the class opts in to cross-device sync:
+ * the kit gets the Katas merge (kataSyncMerge) and the summary of a combined state. On a
+ * dev host, `win.__tsTestKit` (an e2e seam with TSKit's `init`) stands in for the portal
+ * kit instead of the no-op mock.
  */
-export async function initKit({ hostname = location.hostname, TSKit = globalThis.TSKit, win = globalThis } = {}) {
-  if (isDevHost(hostname)) return { kind: 'ready', kit: mockKit(win) };
+export async function initKit({ hostname = location.hostname, TSKit = globalThis.TSKit, win = globalThis, ids } = {}) {
+  if (isDevHost(hostname)) {
+    if (!(win && win.__tsTestKit)) return { kind: 'ready', kit: mockKit(win) };
+    TSKit = win.__tsTestKit;
+  }
   if (!TSKit || typeof TSKit.init !== 'function') return { kind: 'unavailable' };
-  const kit = await TSKit.init({ game: GAME });
+  const options = { game: GAME };
+  if (Array.isArray(ids)) {
+    options.merge = kataSyncMerge(ids);
+    options.summarize = (state) => kataSummary(kataProgress(state, ids), ids.length);
+  }
+  const kit = await TSKit.init(options);
   if (!kit || !kit.user) return { kind: 'redirecting' };
   return { kind: 'ready', kit };
 }
@@ -137,23 +150,45 @@ export function award(kit, event, detail, { cookie = () => document.cookie, onMi
 
 // ---- tile summary: which katas this learner practised and completed ----
 
-const uniqueKnown = (list, ids) => {
-  if (!Array.isArray(list)) return [];
-  const out = [];
-  for (const id of list) if (typeof id === 'string' && ids.includes(id) && !out.includes(id)) out.push(id);
-  return out;
-};
+/** The ids of `ids` that `list` holds, once each, in catalogue (`ids`) order. */
+const knownInOrder = (list, ids) => (Array.isArray(list) ? ids.filter((id) => list.includes(id)) : []);
 
-/** Sanitises a stored `{ viewed, completed }` to unique ids from `ids`; anything else is empty. */
+/**
+ * Sanitises a stored `{ viewed, completed }` to unique ids from `ids`, in catalogue order;
+ * anything else is empty.
+ */
 export function kataProgress(state, ids) {
   const s = state && typeof state === 'object' ? state : {};
-  return { viewed: uniqueKnown(s.viewed, ids), completed: uniqueKnown(s.completed, ids) };
+  return { viewed: knownInOrder(s.viewed, ids), completed: knownInOrder(s.completed, ids) };
 }
 
-/** The union of two progress records, list by list. */
-export function mergeKataProgress(a, b) {
-  const union = (x, y) => [...new Set([...(x || []), ...(y || [])])];
-  return { viewed: union(a.viewed, b.viewed), completed: union(a.completed, b.completed) };
+/**
+ * The union of two progress records, list by list. With `ids` the lists hold known ids only,
+ * in catalogue order, so the result does not depend on the argument order; without, the
+ * union keeps first-seen order.
+ */
+export function mergeKataProgress(a, b, ids) {
+  const union = (x, y) => {
+    const all = [...new Set([...(Array.isArray(x) ? x : []), ...(Array.isArray(y) ? y : [])])];
+    return ids ? knownInOrder(all, ids) : all;
+  };
+  const p = a || {};
+  const q = b || {};
+  return { viewed: union(p.viewed, q.viewed), completed: union(p.completed, q.completed) };
+}
+
+/**
+ * The cross-device merge the kit is given (TSKit.init({ merge })): both copies sanitised with
+ * kataProgress, unioned in catalogue order, `rev` recomputed with kataRev. Pure, idempotent,
+ * commutative and associative; anything unreadable counts as no progress.
+ */
+export function kataSyncMerge(ids) {
+  return (mine, theirs) => kataState(mergeKataProgress(kataProgress(mine, ids), kataProgress(theirs, ids), ids));
+}
+
+/** The synced state: `{ rev, viewed, completed }`. */
+function kataState(progress) {
+  return { rev: kataRev(progress), viewed: progress.viewed, completed: progress.completed };
 }
 
 /**
@@ -225,13 +260,31 @@ export const VERIFY_ATTEMPTS = 3;
 /** Delays between publish retries after a failed read; the last one repeats. */
 export const RETRY_DELAYS_MS = [5000, 10000, 20000, 30000];
 
+/** With a versioned kit: the retry delay while a save has not reached the server (CDS3-004). */
+export const SYNC_RETRY_MS = 30000;
+
+/** Shown (kit.toast) when another device's katas arrive. */
+export const ARRIVAL_NOTICE = 'Updated with your work from your other device.';
+
+/** Shown once (kit.toast) when the kit enters safe mode (kit.syncBroken). */
+export const SAFE_MODE_NOTICE = "Can't sync on this device right now. Your work is kept here.";
+
 /**
- * One retry timer: `arm()` schedules `fire` after the next delay of RETRY_DELAYS_MS unless a
- * timer is already pending (so repeated failures never stack or restart it); the window
- * `online` event fires at once while armed. `clear()` cancels the timer and resets the
- * backoff. The pending timer is not tracked work: leaving never waits for it.
+ * True for the portal kit opted in to cross-device sync (CDS3-006). Anything else (an older
+ * kit, the dev mock) keeps the read-merge-write publish with its read-back verify loop.
  */
-export function createRetryScheduler(fire, { win = globalThis, setTimer = (fn, ms) => setTimeout(fn, ms), clearTimer = (t) => clearTimeout(t) } = {}) {
+export function isVersionedKit(kit) {
+  return Boolean(kit) && typeof kit.refresh === 'function' && typeof kit.deviceId === 'string';
+}
+
+/**
+ * One retry timer: `arm()` schedules `fire` after the next delay of `delays` (default
+ * RETRY_DELAYS_MS) unless a timer is already pending (so repeated failures never stack or
+ * restart it); the window `online` event fires at once while armed. `clear()` cancels the
+ * timer and resets the backoff. The pending timer is not tracked work: leaving never waits
+ * for it.
+ */
+export function createRetryScheduler(fire, { win = globalThis, setTimer = (fn, ms) => setTimeout(fn, ms), clearTimer = (t) => clearTimeout(t), delays = RETRY_DELAYS_MS } = {}) {
   let timer = null;
   let attempt = 0;
   win.addEventListener?.('online', () => {
@@ -243,7 +296,7 @@ export function createRetryScheduler(fire, { win = globalThis, setTimer = (fn, m
   return {
     arm() {
       if (timer !== null) return;
-      const delay = RETRY_DELAYS_MS[Math.min(attempt++, RETRY_DELAYS_MS.length - 1)];
+      const delay = delays[Math.min(attempt++, delays.length - 1)];
       timer = setTimer(() => { timer = null; fire(); }, delay);
     },
     clear() {
@@ -272,6 +325,18 @@ export function createRetryScheduler(fire, { win = globalThis, setTimer = (fn, m
  * succeeds, armed by both a failed start() read and a run whose read fails (STRICT-005),
  * and cleared by a run that completes. An older kit ignores `{ strict: true }` (the
  * previous behavior). `win`, `setTimer` and `clearTimer` are injectable for tests.
+ *
+ * Cross-device sync (portal plan 2026-10-07-cross-device-sync-3): with a versioned kit
+ * (isVersionedKit; initKit gave it kataSyncMerge) the server refuses stale saves and the kit
+ * combines on conflict, so a publish is read (strict, as above), adopt, save, adopt the
+ * result's `merged`, with no read-back. One `adopt(state)` unions another copy into
+ * `progress` and announces ARRIVAL_NOTICE when that added ids (not for the first copy of
+ * the server's progress, which is no arrival). Until a save resolves `{ stored: "server" }`
+ * the retry re-publishes on `online` and every SYNC_RETRY_MS. `refresh()` (the page calls it
+ * when shown again) asks the kit for a newer server copy and adopts it; it is skipped
+ * before start and while a publish is in flight. Safe mode (kit.syncBroken) is announced
+ * once with SAFE_MODE_NOTICE and stops the retry; the page keeps working locally. With an
+ * old kit, everything above this paragraph holds unchanged (even if it answers `stored`).
  */
 export function kataProgressSync(kit, {
   ids,
@@ -282,15 +347,54 @@ export function kataProgressSync(kit, {
   setTimer,
   clearTimer,
 } = {}) {
+  const versioned = isVersionedKit(kit);
   let progress = { viewed: [], completed: [] };
   let loaded = false;
   let recorded = false;
+  let baseline = false; // versioned: a copy of the server's progress has been merged in
+  let announcedBroken = false;
   const read = async () => kataProgress(await kit.load({ strict: true }), ids);
   const guard = () => {
     if (sameAccount(kit, cookie())) return true;
     onMismatch();
     return false;
   };
+  const toast = (text) => {
+    try {
+      if (typeof kit.toast === 'function') kit.toast(text);
+    } catch {
+      // a notice is never worth breaking the sync for
+    }
+  };
+  /** Versioned: union another copy in; announce it when it added ids. True when it did. */
+  function adopt(state) {
+    const before = progress;
+    progress = mergeKataProgress(progress, kataProgress(state, ids), ids);
+    const added = progress.viewed.length > before.viewed.length || progress.completed.length > before.completed.length;
+    if (added && baseline) toast(ARRIVAL_NOTICE);
+    baseline = true;
+    return added;
+  }
+  /** Versioned: in safe mode, announce it once and stop retrying. True in safe mode. */
+  function checkBroken() {
+    if (!versioned || !kit.syncBroken) return false;
+    retry.clear();
+    if (!announcedBroken) {
+      announcedBroken = true;
+      toast(SAFE_MODE_NOTICE);
+    }
+    return true;
+  }
+  /** Versioned publish: the kit's answer ("server", "local", "none"), or "refused". */
+  async function publishVersioned() {
+    if (!guard()) return 'refused';
+    adopt(await read()); // a failed read rejects before any save (class standard 3.6)
+    if (!guard()) return 'refused';
+    const snapshot = progress;
+    const result = await kit.save(kataState(snapshot), kataSummary(snapshot, ids.length));
+    if (result && result.merged !== undefined) adopt(result.merged);
+    return result && result.stored;
+  }
   const holds = (stored, mine) =>
     mine.viewed.every((id) => stored.viewed.includes(id)) && mine.completed.every((id) => stored.completed.includes(id));
   async function publishOnce() {
@@ -305,7 +409,7 @@ export function kataProgressSync(kit, {
     // the learner views or completes that kata again (KSO-006). XP is unaffected (awards
     // use the kit's award queue, not save).
     for (let attempt = 0; attempt < VERIFY_ATTEMPTS; attempt++) {
-      progress = mergeKataProgress(progress, stored);
+      progress = mergeKataProgress(progress, stored, ids);
       if (!guard()) return;
       const snapshot = progress;
       await kit.save({ rev: kataRev(snapshot), viewed: snapshot.viewed, completed: snapshot.completed }, kataSummary(snapshot, ids.length));
@@ -313,7 +417,20 @@ export function kataProgressSync(kit, {
       if (holds(stored, snapshot)) return;
     }
   }
-  const publisher = createPublisher(async () => {
+  const publisher = createPublisher(versioned ? async () => {
+    // Needs a server save until one resolves "server": any other outcome (a failed read,
+    // "local", "none", a throw) re-arms the retry, except in safe mode.
+    let stored;
+    try {
+      stored = await publishVersioned();
+    } catch (err) {
+      if (!checkBroken()) retry.arm();
+      throw err; // createPublisher's catch logs it
+    }
+    if (checkBroken()) return;
+    if (stored === 'server' || stored === 'refused') retry.clear();
+    else retry.arm();
+  } : async () => {
     try {
       await publishOnce();
     } catch (err) {
@@ -324,14 +441,17 @@ export function kataProgressSync(kit, {
     }
     retry.clear();
   }, { track });
-  const retry = createRetryScheduler(() => publisher.request(), { win, setTimer, clearTimer });
+  const retry = createRetryScheduler(() => publisher.request(), {
+    win, setTimer, clearTimer, delays: versioned ? [SYNC_RETRY_MS] : RETRY_DELAYS_MS,
+  });
   return {
     async start() {
       let ok = false;
       try {
         const stored = await read(); // ids may be recorded while this read is out
-        progress = mergeKataProgress(progress, stored);
+        progress = mergeKataProgress(progress, stored, ids);
         ok = true;
+        baseline = true;
       } catch (err) {
         // Not ready: publish nothing built without the stored state. What this page
         // recorded stays here; the retry publishes it once a read succeeds (a later
@@ -339,17 +459,31 @@ export function kataProgressSync(kit, {
         console.warn('[kit] progress read failed:', err && err.message ? err.message : err);
       }
       loaded = true;
+      const broken = checkBroken();
       if (!recorded) return;
       if (ok) await publisher.request();
-      else retry.arm();
+      else if (!broken) retry.arm();
     },
     record(kind, id) {
       if (!ids.includes(id)) return;
       const list = kind === 'completed' ? 'completed' : 'viewed';
       if (progress[list].includes(id)) return; // nothing new to publish
-      progress = { ...progress, [list]: [...progress[list], id] };
+      progress = mergeKataProgress(progress, { [list]: [id] }, ids);
       recorded = true;
       if (loaded) publisher.request();
+    },
+    /** Versioned kit only: adopt a newer server copy (the page was shown again). */
+    async refresh() {
+      if (!versioned || !loaded || publisher.busy()) return;
+      if (checkBroken() || !guard()) return;
+      let result = null;
+      try {
+        result = await kit.refresh(kataState(progress));
+      } catch (err) {
+        console.warn('[kit] progress refresh failed:', err && err.message ? err.message : err);
+      }
+      if (result && result.changed && result.state !== undefined) adopt(result.state);
+      checkBroken();
     },
     progress: () => progress,
   };

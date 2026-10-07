@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { award, createPublisher, flushAwards, furthestStepTracker, homeRoomHandler, HOME_ROOM_URL, initKit, isDevHost, isProgressUnavailable, kataProgress, kataProgressSync, kataRev, kataSummary, mergeKataProgress, VERIFY_ATTEMPTS, mockKit, pendingAwardCount, sameAccount, sessionUserId, trackPending, GAME } from '../public/js/kit.js';
+import { ARRIVAL_NOTICE, award, createPublisher, flushAwards, furthestStepTracker, homeRoomHandler, HOME_ROOM_URL, initKit, isDevHost, isProgressUnavailable, isVersionedKit, kataProgress, kataProgressSync, kataRev, kataSummary, kataSyncMerge, mergeKataProgress, SAFE_MODE_NOTICE, SYNC_RETRY_MS, VERIFY_ATTEMPTS, mockKit, pendingAwardCount, sameAccount, sessionUserId, trackPending, GAME } from '../public/js/kit.js';
 
 function jwt(sub) {
   const b64 = (o) => Buffer.from(JSON.stringify(o)).toString('base64url');
@@ -867,4 +867,347 @@ test('mockKit: load and save round-trip in memory, saves are recorded, a lower r
   await kit.save({ rev: 2, viewed: ['chinto', 'wansu'], completed: [] }, { headline: '2 katas practised' });
   assert.deepEqual(await kit.load(), { rev: 101, viewed: ['seisan'], completed: ['seisan'] });
   assert.deepEqual(win.__kitSaves.map((s) => s.summary.headline), ['1 of 5 katas completed', '2 katas practised']);
+});
+
+// ---- cross-device sync (portal plan 2026-10-07-cross-device-sync-3, Task 3) ----
+
+test('kataProgress keeps catalogue order, whatever order the stored lists are in', () => {
+  assert.deepEqual(
+    kataProgress({ viewed: ['chinto', 'wansu', 'seisan', 'chinto'], completed: ['chinto', 'seisan'] }, IDS),
+    { viewed: ['seisan', 'wansu', 'chinto'], completed: ['seisan', 'chinto'] },
+  );
+});
+
+test('Katas merge: the union in catalogue order, whatever the argument order', () => {
+  const merge = kataSyncMerge(IDS);
+  const a = { viewed: ['chinto', 'seisan'], completed: ['seisan'] };
+  const b = { viewed: ['wansu', 'nope'], completed: [] };
+  assert.deepEqual(merge(a, b), { rev: 103, viewed: ['seisan', 'wansu', 'chinto'], completed: ['seisan'] });
+  assert.deepEqual(merge(a, b), merge(b, a));
+  assert.deepEqual(mergeKataProgress(b, a, IDS).viewed, ['seisan', 'wansu', 'chinto']);
+  // The kit calls merge with whatever the server row holds, including nothing.
+  assert.deepEqual(merge({}, undefined), { rev: 0, viewed: [], completed: [] });
+  assert.deepEqual(merge(null, 'junk'), { rev: 0, viewed: [], completed: [] });
+  assert.deepEqual(merge({ rev: 999, viewed: ['seisan'], completed: [] }, {}), { rev: 1, viewed: ['seisan'], completed: [] }, 'rev is recomputed');
+});
+
+test('Katas merge is idempotent, commutative and associative on simulated devices (600 seeds)', () => {
+  const merge = kataSyncMerge(IDS);
+  const rng = (seed) => { let x = seed >>> 0; return () => ((x = (x * 1664525 + 1013904223) >>> 0) / 2 ** 32); };
+  for (let seed = 1; seed <= 600; seed++) {
+    const r = rng(seed);
+    const devices = ['pc', 'phone', 'tablet'];
+    const st = new Map(devices.map((d) => [d, merge({}, {})]));
+    for (let i = 0; i < 40; i++) {
+      const d = devices[Math.floor(r() * 3)];
+      const s = st.get(d);
+      const id = IDS[Math.floor(r() * IDS.length)];
+      if (r() < 0.6) st.set(d, merge(s, r() < 0.5 ? { viewed: [id], completed: [] } : { viewed: [id], completed: [id] }));
+      else {
+        const o = devices.filter((x) => x !== d)[Math.floor(r() * 2)];
+        const m = merge(s, st.get(o));
+        st.set(d, m);
+        if (r() < 0.5) st.set(o, m);
+      }
+    }
+    const [a, b, c] = devices.map((d) => st.get(d));
+    assert.deepEqual(merge(a, a), a);
+    assert.deepEqual(merge(a, b), merge(b, a));
+    assert.deepEqual(merge(merge(a, b), c), merge(a, merge(b, c)));
+    for (const [x, y] of [[a, b], [b, c], [a, c]]) {
+      const m = merge(x, y);
+      for (const id of [...x.viewed, ...y.viewed]) assert.ok(m.viewed.includes(id), 'no viewed kata lost');
+      for (const id of [...x.completed, ...y.completed]) assert.ok(m.completed.includes(id), 'no completed kata lost');
+    }
+  }
+});
+
+test('initKit opts in to the versioned kit with the Katas merge and summary when given the ids', async () => {
+  let options = null;
+  const kit = { user: { id: 'u1' } };
+  const r = await initKit({ hostname: 'karate.travelschooling.com', ids: IDS, TSKit: { init: async (o) => { options = o; return kit; } } });
+  assert.equal(r.kit, kit);
+  assert.equal(options.game, GAME);
+  assert.deepEqual(options.merge({ viewed: ['chinto'] }, { viewed: ['seisan'], completed: ['seisan'] }), { rev: 102, viewed: ['seisan', 'chinto'], completed: ['seisan'] });
+  assert.deepEqual(options.summarize({ rev: 1, viewed: ['wansu', 'nope'], completed: [] }), { headline: '1 kata practised', percent: 0 });
+});
+
+test('initKit uses window.__tsTestKit (e2e seam) on a dev host, as it would TSKit', async () => {
+  let options = null;
+  const kit = { mock: true, user: { id: 'e2e' }, deviceId: 'pc', refresh: async () => ({ changed: false }) };
+  const win = { __tsTestKit: { init: async (o) => { options = o; return kit; } } };
+  const r = await initKit({ hostname: 'localhost', ids: IDS, win, TSKit: { init: async () => { throw new Error('not this one'); } } });
+  assert.equal(r.kind, 'ready');
+  assert.equal(r.kit, kit);
+  assert.equal(typeof options.merge, 'function');
+  assert.equal(win.__kitAwards, undefined, 'the no-op mock was not built');
+  // Not on the live host: the seam is ignored there.
+  const live = await initKit({ hostname: 'karate.travelschooling.com', ids: IDS, win, TSKit: undefined });
+  assert.deepEqual(live, { kind: 'unavailable' });
+});
+
+test('isVersionedKit: refresh and a string deviceId, both', () => {
+  assert.equal(isVersionedKit({ refresh: async () => ({}), deviceId: 'd1' }), true);
+  assert.equal(isVersionedKit({ refresh: async () => ({}) }), false);
+  assert.equal(isVersionedKit({ deviceId: 'd1' }), false);
+  assert.equal(isVersionedKit(mockKit({})), false);
+});
+
+/**
+ * A versioned kit over one shared server record: save merges into the server (as a conflict
+ * round would) and answers `merged` when the combined copy differs from what was saved;
+ * refresh answers the combined copy when the server holds something `current` lacks.
+ * `server.savesLocal`: save answers "local"; `server.readsFail`: a strict load rejects.
+ */
+function versionedKit(server, { deviceId = 'pc' } = {}) {
+  const toasts = [];
+  const calls = { load: 0, save: 0, refresh: 0 };
+  const merge = kataSyncMerge(IDS);
+  const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const kit = {
+    mock: true, // sameAccount without a cookie in node; the account guard has its own test
+    user: { id: 'u1' },
+    deviceId,
+    syncBroken: false,
+    load: async (opts) => {
+      calls.load++;
+      if (server.readsFail) {
+        if (opts && opts.strict) throw Object.assign(new Error('progress unavailable'), { code: 'progress-unavailable' });
+        return {};
+      }
+      return structuredClone(server.state);
+    },
+    save: async (state) => {
+      calls.save++;
+      if (server.savesLocal) return { stored: 'local' };
+      const merged = merge(server.state, state);
+      server.state = merged;
+      return same(merged, merge(state, {})) ? { stored: 'server' } : { stored: 'server', merged };
+    },
+    refresh: async (current) => {
+      calls.refresh++;
+      const m = merge(current, server.state);
+      return same(m, merge(current, {})) ? { changed: false } : { changed: true, state: m };
+    },
+    toast: (t) => toasts.push(t),
+  };
+  return { kit, toasts, calls };
+}
+
+/** A versioned sync with injected retry timers and window. */
+function versionedSync(server, opts) {
+  const { kit, toasts, calls } = versionedKit(server, opts);
+  const { set, track } = localTrack();
+  const timers = retryTimers();
+  const win = fakeWin();
+  const sync = kataProgressSync(kit, { ids: IDS, cookie: () => '', track, win, setTimer: timers.setTimer, clearTimer: timers.clearTimer });
+  return { kit, toasts, calls, set, timers, win, sync };
+}
+
+test("versioned: a save adopts the other device's katas and a refresh picks up later ones, with the notice", async () => {
+  const server = { state: { rev: 1, viewed: ['wansu'], completed: [] } };
+  const { set, toasts, sync } = versionedSync(server);
+  await sync.start();
+  assert.deepEqual(toasts, [], 'the first read is not an arrival');
+  sync.record('viewed', 'seisan');
+  await idle(set);
+  assert.deepEqual(sync.progress().viewed, ['seisan', 'wansu']);
+  assert.deepEqual(server.state, { rev: 2, viewed: ['seisan', 'wansu'], completed: [] }, 'catalogue order on the server too');
+  server.state = { rev: 3, viewed: ['seisan', 'wansu', 'chinto'], completed: [] }; // the phone viewed Chinto
+  await sync.refresh();
+  assert.deepEqual(sync.progress().viewed, ['seisan', 'wansu', 'chinto']);
+  assert.deepEqual(toasts, [ARRIVAL_NOTICE]);
+  await sync.refresh(); // nothing new: no second notice
+  assert.deepEqual(toasts, [ARRIVAL_NOTICE]);
+});
+
+test('versioned: two devices viewing different katas end with the same union, whoever saves first', async () => {
+  for (const pcFirst of [true, false]) {
+    const server = { state: {} };
+    const pc = versionedSync(server, { deviceId: 'pc' });
+    const phone = versionedSync(server, { deviceId: 'phone' });
+    await pc.sync.start();
+    await phone.sync.start();
+    const [first, second] = pcFirst ? [pc, phone] : [phone, pc];
+    first.sync.record('viewed', first === pc ? 'chinto' : 'wansu');
+    await idle(first.set);
+    second.sync.record('viewed', second === pc ? 'chinto' : 'wansu');
+    await idle(second.set);
+    await first.sync.refresh();
+    assert.deepEqual(pc.sync.progress(), phone.sync.progress());
+    assert.deepEqual(pc.sync.progress().viewed, ['wansu', 'chinto']);
+    assert.deepEqual(server.state, { rev: 2, viewed: ['wansu', 'chinto'], completed: [] });
+  }
+});
+
+test("versioned: the pre-save read brings in another device's kata; the notice fires once", async () => {
+  const server = { state: { rev: 1, viewed: ['seisan'], completed: [] } };
+  const { set, toasts, sync } = versionedSync(server);
+  await sync.start();
+  server.state = { rev: 2, viewed: ['seisan', 'wansu'], completed: [] }; // the phone, meanwhile
+  sync.record('viewed', 'chinto');
+  await idle(set);
+  assert.deepEqual(sync.progress().viewed, ['seisan', 'wansu', 'chinto']);
+  assert.deepEqual(toasts, [ARRIVAL_NOTICE], 'once, not again for the save result');
+  assert.deepEqual(server.state.viewed, ['seisan', 'wansu', 'chinto']);
+});
+
+test("versioned: a save result's merged copy is adopted, with the notice", async () => {
+  const server = { state: {} };
+  const { kit, set, toasts, sync } = versionedSync(server);
+  await sync.start();
+  const save = kit.save;
+  kit.save = async (state, summary) => {
+    // The phone completes Naihanchi between this device's read and its save.
+    server.state = kataSyncMerge(IDS)(server.state, { viewed: ['naihanchi'], completed: ['naihanchi'] });
+    return save(state, summary);
+  };
+  sync.record('viewed', 'seisan');
+  await idle(set);
+  assert.deepEqual(sync.progress(), { viewed: ['seisan', 'naihanchi'], completed: ['naihanchi'] });
+  assert.deepEqual(toasts, [ARRIVAL_NOTICE]);
+});
+
+test('versioned: no read-back verify loop (start + one pre-save read per publish)', async () => {
+  const server = { state: {} };
+  const { set, calls, sync } = versionedSync(server);
+  await sync.start();
+  sync.record('viewed', 'seisan');
+  await idle(set);
+  assert.equal(calls.load, 2, 'start, then the read before merging; no read-back');
+  assert.equal(calls.save, 1);
+});
+
+test('versioned: a save that stayed local is retried on online without another kata event, and every 30 s', async () => {
+  const server = { state: {}, savesLocal: true };
+  const { set, timers, win, calls, sync } = versionedSync(server);
+  await sync.start();
+  sync.record('viewed', 'seisan');
+  await idle(set);
+  assert.equal(calls.save, 1);
+  assert.deepEqual(server.state, {}, 'nothing reached the server');
+  assert.deepEqual(timers.scheduled, [SYNC_RETRY_MS], 'needs a server save: armed for 30 s');
+  timers.fire(); // still local after 30 s: re-armed for another 30 s, not a backoff
+  await idle(set);
+  assert.equal(calls.save, 2);
+  assert.deepEqual(timers.scheduled, [SYNC_RETRY_MS, SYNC_RETRY_MS]);
+  server.savesLocal = false;
+  win.dispatch('online');
+  await idle(set);
+  assert.equal(calls.save, 3);
+  assert.deepEqual(server.state, { rev: 1, viewed: ['seisan'], completed: [] });
+  assert.equal(timers.pending(), 0, 'cleared by { stored: "server" }');
+  win.dispatch('online'); // not armed: nothing happens
+  await idle(set);
+  assert.equal(calls.save, 3);
+});
+
+test('versioned: a failed strict read saves nothing and retries every 30 s until a read succeeds', async () => {
+  await quietly(async () => {
+    const server = { state: { rev: 1, viewed: ['seisan'], completed: [] }, readsFail: false };
+    const { set, timers, win, calls, sync } = versionedSync(server);
+    await sync.start();
+    server.readsFail = true;
+    sync.record('viewed', 'chinto');
+    await idle(set);
+    assert.equal(calls.save, 0, 'no save built without the stored state (class standard 3.6)');
+    assert.deepEqual(timers.scheduled, [SYNC_RETRY_MS]);
+    server.readsFail = false;
+    win.dispatch('online');
+    await idle(set);
+    assert.deepEqual(server.state, { rev: 2, viewed: ['seisan', 'chinto'], completed: [] });
+    assert.equal(timers.pending(), 0);
+  });
+});
+
+test('versioned: safe mode is announced once, and the retry stops', async () => {
+  const server = { state: {}, savesLocal: false };
+  const { kit, set, timers, toasts, sync } = versionedSync(server);
+  await sync.start();
+  const save = kit.save;
+  kit.save = async (state, summary) => {
+    // The kit's merge threw on corrupt server data: safe mode, the save stays on the device.
+    kit.syncBroken = true;
+    server.savesLocal = true;
+    return save(state, summary);
+  };
+  sync.record('viewed', 'seisan');
+  await idle(set);
+  assert.equal(timers.pending(), 0, 'no retry in safe mode');
+  sync.record('viewed', 'chinto');
+  await idle(set);
+  await sync.refresh();
+  assert.deepEqual(toasts.filter((t) => t.startsWith("Can't sync")), [SAFE_MODE_NOTICE]);
+  assert.equal(SAFE_MODE_NOTICE, "Can't sync on this device right now. Your work is kept here.");
+  assert.equal(ARRIVAL_NOTICE, 'Updated with your work from your other device.');
+  assert.deepEqual(sync.progress().viewed, ['seisan', 'chinto'], 'the page keeps working locally');
+  assert.equal(timers.pending(), 0);
+});
+
+test('versioned: a kit already in safe mode at start is announced once after start', async () => {
+  const server = { state: { rev: 1, viewed: ['wansu'], completed: [] } };
+  const { kit, toasts, sync } = versionedSync(server);
+  kit.syncBroken = true;
+  await sync.start();
+  await sync.refresh();
+  assert.deepEqual(toasts, [SAFE_MODE_NOTICE]);
+});
+
+test('versioned: refresh waits for start and is skipped while a publish is in flight', async () => {
+  const server = { state: {} };
+  const { kit, set, calls, sync } = versionedSync(server);
+  await sync.refresh();
+  assert.equal(calls.refresh, 0, 'not before the first read');
+  await sync.start();
+  const gate = deferred();
+  const save = kit.save;
+  kit.save = async (state, summary) => { await gate.promise; return save(state, summary); };
+  sync.record('viewed', 'seisan');
+  await tick();
+  await sync.refresh();
+  assert.equal(calls.refresh, 0, 'the publisher is busy');
+  gate.resolve();
+  await idle(set);
+  await sync.refresh();
+  assert.equal(calls.refresh, 1);
+});
+
+test('versioned: refresh sends the current progress in the synced shape', async () => {
+  const server = { state: { rev: 1, viewed: ['wansu'], completed: [] } };
+  const { kit, sync } = versionedSync(server);
+  await sync.start();
+  let sent = null;
+  const refresh = kit.refresh;
+  kit.refresh = async (current) => { sent = current; return refresh(current); };
+  await sync.refresh();
+  assert.deepEqual(sent, { rev: 1, viewed: ['wansu'], completed: [] });
+});
+
+test('an old kit that returns { stored: "server" } still runs the read-back verify loop, and refresh does nothing', async () => {
+  const portal = fakePortal();
+  const kit = await fakeKit(portal, new Map()).init();
+  kit.mock = true;
+  const save = kit.save.bind(kit);
+  kit.save = async (state, summary) => { await save(state, summary); return { stored: 'server', merged: { viewed: ['chinto'], completed: [] } }; };
+  kit.toast = () => { throw new Error('an old kit path never toasts'); };
+  const { set, track } = localTrack();
+  const sync = kataProgressSync(kit, { ids: IDS, cookie: () => '', track });
+  const seen = [];
+  const load = kit.load.bind(kit);
+  kit.load = (opts) => { seen.push(opts); return load(opts); };
+  await sync.start();
+  sync.record('viewed', 'seisan');
+  await idle(set);
+  assert.equal(seen.length, 3, 'start, the read before merging, the read-back');
+  assert.deepEqual(sync.progress().viewed, ['seisan'], 'merged is ignored by the old path');
+  await sync.refresh();
+  assert.equal(seen.length, 3);
+  // A kit with refresh but no deviceId is not versioned either.
+  kit.refresh = async () => { throw new Error('not versioned: never called'); };
+  const sync2 = kataProgressSync(kit, { ids: IDS, cookie: () => '', track });
+  await sync2.start();
+  await sync2.refresh();
+  sync2.record('viewed', 'chinto');
+  await idle(set);
+  assert.equal(seen.length, 6, 'the verify loop again');
 });
