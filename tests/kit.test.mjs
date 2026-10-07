@@ -1271,3 +1271,92 @@ test('versioned: start publishes non-empty progress even when the load matches t
   await idle(empty.set);
   assert.equal(empty.calls.save, 0);
 });
+
+/**
+ * KATAS-CDS3-R001: the versioned kit in safe mode keeps every save on the device (its own
+ * entry, sent nothing) and answers a non-strict load with that local copy, while a strict
+ * load still rejects when the read fails (offline). `storage` stands for the device's
+ * localStorage: a new kit over the same storage is a reopened page.
+ */
+function safeModeKit(storage) {
+  const saves = [];
+  const loads = [];
+  const toasts = [];
+  return {
+    mock: true, // sameAccount without a cookie in node
+    user: { id: 'u1' },
+    deviceId: 'pc',
+    syncBroken: true,
+    saves,
+    loads,
+    toasts,
+    load: async (opts) => {
+      loads.push(opts);
+      if (opts && opts.strict) throw Object.assign(new Error('progress unavailable'), { code: 'progress-unavailable' });
+      return storage.has('own') ? structuredClone(storage.get('own')) : {};
+    },
+    save: async (state) => {
+      saves.push(structuredClone(state));
+      storage.set('own', structuredClone(state)); // a snapshot replaces the entry: snapshots are cumulative
+      return { stored: 'local' };
+    },
+    refresh: async () => ({ changed: false }),
+    toast: (t) => toasts.push(t),
+  };
+}
+function safeModeSync(storage) {
+  const kit = safeModeKit(storage);
+  const { set, track } = localTrack();
+  const timers = retryTimers();
+  const sync = kataProgressSync(kit, { ids: IDS, cookie: () => '', track, win: fakeWin(), setTimer: timers.setTimer, clearTimer: timers.clearTimer });
+  return { kit, set, timers, sync };
+}
+
+test('safe mode with failing reads: start uses the local copy, and a new completion is saved to the kit (KATAS-CDS3-R001)', async () => {
+  await quietly(async () => {
+    const storage = new Map([['own', { rev: 1, viewed: ['seisan'], completed: [] }]]);
+    const { kit, set, timers, sync } = safeModeSync(storage);
+    await sync.start();
+    await idle(set);
+    assert.deepEqual(sync.progress(), { viewed: ['seisan'], completed: [] }, 'started from the local copy');
+    sync.record('viewed', 'chinto');
+    sync.record('completed', 'chinto');
+    await idle(set);
+    assert.deepEqual(kit.saves.at(-1), { rev: 102, viewed: ['seisan', 'chinto'], completed: ['chinto'] });
+    assert.ok(kit.loads.every((o) => !(o && o.strict)), 'no strict read in safe mode');
+    assert.equal(timers.pending(), 0, 'nothing is sent in safe mode, so nothing to retry');
+    assert.deepEqual(kit.toasts, [SAFE_MODE_NOTICE]);
+  });
+});
+
+test('safe mode entered mid-session while reads fail: the next kata still reaches the kit (KATAS-CDS3-R001)', async () => {
+  await quietly(async () => {
+    const server = { state: { rev: 1, viewed: ['seisan'], completed: [] } };
+    const { kit, set, timers, sync } = versionedSync(server);
+    await sync.start();
+    await idle(set);
+    const saved = [];
+    kit.syncBroken = true; // the kit's merge threw on corrupt server data
+    server.readsFail = true; // and the device went offline
+    kit.save = async (state) => { saved.push(structuredClone(state)); return { stored: 'local' }; };
+    sync.record('completed', 'wansu');
+    await idle(set);
+    assert.deepEqual(saved, [{ rev: 101, viewed: ['seisan'], completed: ['wansu'] }]);
+    assert.equal(timers.pending(), 0);
+  });
+});
+
+test('safe mode: a completion saved offline is there when the page is reopened (KATAS-CDS3-R001)', async () => {
+  await quietly(async () => {
+    const storage = new Map();
+    const first = safeModeSync(storage);
+    await first.sync.start();
+    first.sync.record('viewed', 'naihanchi');
+    first.sync.record('completed', 'naihanchi');
+    await idle(first.set);
+    const reopened = safeModeSync(storage);
+    await reopened.sync.start();
+    await idle(reopened.set);
+    assert.deepEqual(reopened.sync.progress(), { viewed: ['naihanchi'], completed: ['naihanchi'] });
+  });
+});

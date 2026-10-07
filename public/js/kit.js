@@ -335,7 +335,9 @@ export function createRetryScheduler(fire, { win = globalThis, setTimer = (fn, m
  * the retry re-publishes on `online` and every SYNC_RETRY_MS. `refresh()` (the page calls it
  * when shown again) asks the kit for a newer server copy and adopts it; it is skipped
  * before start and while a publish is in flight. Safe mode (kit.syncBroken) is announced
- * once with SAFE_MODE_NOTICE and stops the retry; the page keeps working locally. With an
+ * once with SAFE_MODE_NOTICE and stops the retry; the page keeps working locally: start()
+ * reads the kit's own copy (non-strict) and each publish saves straight to the kit, which
+ * keeps it on the device, with no read first (KATAS-CDS3-R001). With an
  * old kit, everything above this paragraph holds unchanged (even if it answers `stored`).
  */
 export function kataProgressSync(kit, {
@@ -385,9 +387,21 @@ export function kataProgressSync(kit, {
     }
     return true;
   }
-  /** Versioned publish: the kit's answer ("server", "local", "none"), or "refused". */
+  /** Versioned kit in safe mode (kit.syncBroken): saves stay on the device, nothing is sent. */
+  const safeMode = () => versioned && Boolean(kit.syncBroken);
+  /**
+   * Versioned publish: the kit's answer ("server", "local", "none"), or "refused". In safe
+   * mode (KATAS-CDS3-R001) the save goes straight to the kit, which keeps it on the device
+   * and sends nothing, so there is no server copy to read first; a strict read offline
+   * would reject and the kata would never reach the kit's local store.
+   */
   async function publishVersioned() {
     if (!guard()) return 'refused';
+    if (safeMode()) {
+      const snapshot = progress;
+      const result = await kit.save(kataState(snapshot), kataSummary(snapshot, ids.length));
+      return result && result.stored;
+    }
     adopt(await read()); // a failed read rejects before any save (class standard 3.6)
     if (!guard()) return 'refused';
     const snapshot = progress;
@@ -448,7 +462,10 @@ export function kataProgressSync(kit, {
     async start() {
       let ok = false;
       try {
-        const stored = await read(); // ids may be recorded while this read is out
+        // ids may be recorded while this read is out. In safe mode the kit answers a
+        // non-strict load with this device's own copy, which is all there is to start from
+        // (a strict read offline would reject and block the start; KATAS-CDS3-R001).
+        const stored = safeMode() ? kataProgress(await kit.load(), ids) : await read();
         progress = mergeKataProgress(progress, stored, ids);
         ok = true;
         baseline = true;
