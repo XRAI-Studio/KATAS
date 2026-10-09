@@ -231,6 +231,13 @@ async function phoneScreen(browser: Awaited<ReturnType<typeof chromium.launch>>,
     const page = await context.newPage();
     await page.goto(`${base}/`, { waitUntil: "load" });
     await page.waitForFunction(() => document.querySelectorAll("#kata-select option").length === 5, null, { timeout: 30_000 });
+    // The options appear before the kata file loads; Copy link does nothing until the player
+    // and its timeline exist (main.js), so wait for them (Codex KATAS-APPEARANCE-001).
+    await page.waitForFunction(
+      () => !!(window as unknown as { __katasDev?: { player: () => { timeline?: unknown } | null } }).__katasDev?.player()?.timeline,
+      null,
+      { timeout: 30_000 },
+    );
     type Box = { w: number; h: number; top: number; bottom: number; left: number; right: number };
     // No named helpers inside evaluate: tsx (esbuild keepNames) would wrap them in __name,
     // which does not exist in the page.
@@ -287,6 +294,8 @@ async function phoneScreen(browser: Awaited<ReturnType<typeof chromium.launch>>,
       banner.classList.remove("hidden");
     });
     await page.waitForFunction(() => !document.getElementById("link-out")!.classList.contains("hidden"), null, { timeout: 10_000 });
+    // The bunkai card is shown by the next rendered frame, not synchronously by the toggle.
+    await page.waitForFunction(() => !document.getElementById("bunkai-card")!.classList.contains("hidden"), null, { timeout: 10_000 });
     const busy = await page.evaluate(() => {
       const bannerEl = document.getElementById("error-banner")!;
       const text = document.createRange();
