@@ -4,19 +4,20 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #1a140e;
 #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 .hidden { display: none !important; }
 
-/* HUD */
+/* HUD. Panels are opaque enough (.8) that their text keeps 4.5:1 even over the brightest
+   part of the dojo (lit paper walls); see the dark-mode plan's contrast table. */
 #hud { position: fixed; top: 14px; left: 14px; max-width: 380px; pointer-events: none; }
 #step-label { font-size: 18px; font-weight: 600; text-shadow: 0 1px 4px #000;
-  background: rgba(20, 14, 8, .65); border-left: 4px solid #b33; padding: 8px 12px;
+  background: rgba(20, 14, 8, .8); border-left: 4px solid #b33; padding: 8px 12px;
   border-radius: 4px; }
 #step-label .badge { display: inline-block; margin-left: 8px; font-size: 11px;
   font-weight: 700; color: #ffd27a; border: 1px solid #ffd27a; border-radius: 3px;
   padding: 1px 5px; vertical-align: 2px; }
 #time-readout { display: inline-block; margin-top: 6px; padding: 3px 8px; font-size: 13px;
-  font-variant-numeric: tabular-nums; color: #d8ccb8; background: rgba(20, 14, 8, .55);
+  font-variant-numeric: tabular-nums; color: #d8ccb8; background: rgba(20, 14, 8, .8);
   border-radius: 4px; text-shadow: 0 1px 3px #000; }
 #time-readout:empty { display: none; }
-#bunkai-card { margin-top: 10px; background: rgba(20, 14, 8, .75); border-left: 4px solid #7a1f1f;
+#bunkai-card { margin-top: 10px; background: rgba(20, 14, 8, .8); border-left: 4px solid #7a1f1f;
   padding: 10px 12px; border-radius: 4px; font-size: 14px; line-height: 1.4; max-width: 360px; }
 #bunkai-card h4 { color: #e89b9b; font-size: 12px; text-transform: uppercase;
   letter-spacing: .08em; margin-bottom: 4px; }
@@ -43,43 +44,72 @@ html, body { width: 100%; height: 100%; overflow: hidden; background: #1a140e;
 
 /* Return to Home Room: fixed top-right, above the error banner, clear of the HUD */
 #home-room { position: fixed; top: 10px; right: 12px; z-index: 11; white-space: nowrap;
-  background: #33261a; color: #f0e8da; border: 1px solid #55402b; border-radius: 6px;
+  background: #33261a; color: #f0e8da; border: 1px solid #b08d68; border-radius: 6px;
   padding: 6px 12px; font: 600 13px "Segoe UI", system-ui, sans-serif; cursor: pointer;
   box-shadow: 0 1px 6px rgba(0, 0, 0, .5); }
 #home-room:hover { background: #4a3625; }
 #home-room:focus-visible { outline: 2px solid #ffd27a; outline-offset: 2px; }
-@media (max-width: 640px) {
-  /* Narrow screens: the HUD moves below the button and may use the full width. */
-  #hud { top: 52px; right: 14px; max-width: none; }
-  #error-banner { padding-right: 172px; text-align: left; }
-}
 
-/* Control bar */
+/* Control bar (its top is opaque enough for 4.5:1 labels over the brightest scene) */
 #controls { position: fixed; left: 0; right: 0; bottom: 0; z-index: 4;
-  background: linear-gradient(rgba(18, 12, 7, .55), rgba(18, 12, 7, .92));
+  background: linear-gradient(rgba(18, 12, 7, .82), rgba(18, 12, 7, .94));
   padding: 10px 16px 12px; backdrop-filter: blur(6px); }
 #controls .row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
 #controls .row + .row { margin-top: 8px; font-size: 13px; }
-#controls button { background: #33261a; color: #f0e8da; border: 1px solid #55402b;
+#controls button { background: #33261a; color: #f0e8da; border: 1px solid #b08d68;
   border-radius: 6px; padding: 6px 12px; font-size: 15px; cursor: pointer; }
 #controls button:hover { background: #4a3625; }
-#controls select { background: #33261a; color: #f0e8da; border: 1px solid #55402b;
+#controls select { background: #33261a; color: #f0e8da; border: 1px solid #b08d68;
   border-radius: 6px; padding: 6px 8px; font-size: 14px; }
+#controls :focus-visible { outline: 2px solid #ffd27a; outline-offset: 2px; }
 #controls label { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }
 
 #scrub-wrap { position: relative; flex: 1 1 240px; height: 28px; display: flex; align-items: center; }
-#scrub { width: 100%; accent-color: #c9503c; cursor: pointer; }
+#scrub { width: 100%; accent-color: #e0604a; cursor: pointer; }
 #markers { position: absolute; left: 0; right: 0; top: 1px; height: 8px; pointer-events: none; }
 #markers .tick { position: absolute; top: 2px; width: 1px; height: 5px; background: #8a7458; }
 #markers .kiai { position: absolute; top: 0; width: 3px; height: 9px; background: #ff4030;
   border-radius: 1px; box-shadow: 0 0 4px #ff4030; }
 
 .speed-label { gap: 8px; }
-#speed { width: 130px; accent-color: #c9503c; }
+#speed { width: 130px; accent-color: #e0604a; }
 #speed-value { min-width: 48px; font-variant-numeric: tabular-nums; }
 #btn-link { font-size: 12px; padding: 4px 10px; }
 #link-out { flex: 1 1 220px; min-width: 180px; background: #1e150e; color: #f0e8da;
-  border: 1px solid #55402b; border-radius: 6px; padding: 5px 8px; font-size: 12px;
+  border: 1px solid #b08d68; border-radius: 6px; padding: 5px 8px; font-size: 12px;
   font-family: ui-monospace, Consolas, monospace; }
 #camera-presets { display: inline-flex; gap: 6px; margin-left: auto; }
 #camera-presets button { font-size: 12px; padding: 4px 10px; }
+
+/* Phone (dark-mode and phone plan, 2026-10-08). Last in the file so it overrides the rules
+   above at equal specificity. At 375 x 667: no sideways page scroll, reading text >= 16px,
+   captions >= 13px, transport buttons >= 44 x 44. */
+@media (max-width: 640px) {
+  /* The Home Room button is a full-size target; the HUD moves below it and may use the
+     full width. */
+  #home-room { min-height: 44px; padding: 8px 14px; font-size: 14px; }
+  #hud { top: 64px; right: 14px; max-width: none; }
+  #step-label .badge { font-size: 13px; }
+  #bunkai-card { font-size: 16px; max-width: none; }
+  #bunkai-card h4 { font-size: 13px; }
+  /* Full width: the text starts below the Home Room button instead of beside it. */
+  #error-banner { padding: 62px 16px 10px; font-size: 16px; text-align: left; }
+  #kiai-text { font-size: clamp(36px, 12vw, 64px); }
+
+  /* The control bar is capped so the dojo stays in view, and scrolls inside itself; the
+     transport row comes first, so it is visible without scrolling. */
+  #controls { max-height: 42vh; max-height: 42dvh; overflow-y: auto; overscroll-behavior: contain;
+    padding: 8px 12px 10px; }
+  #controls .row { gap: 8px 10px; }
+  #controls #btn-prev, #controls #btn-play, #controls #btn-next { min-width: 44px;
+    min-height: 44px; padding: 6px 10px; font-size: 18px; }
+  #controls select { min-height: 44px; min-width: 0; max-width: 100%; font-size: 16px; }
+  #kata-select { flex: 1 1 140px; }
+  #scrub-wrap { flex-basis: 100%; height: 32px; }
+  .speed-label { flex: 1 1 100%; }
+  #speed { flex: 1 1 auto; width: auto; min-width: 0; max-width: 100%; }
+  #voice-select { flex: 1 1 180px; }
+  #link-out { flex: 1 1 100%; min-width: 0; font-size: 16px; }
+  #camera-presets { flex-wrap: wrap; margin-left: 0; }
+  #camera-presets button { padding: 6px 10px; font-size: 13px; }
+}

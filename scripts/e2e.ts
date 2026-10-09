@@ -13,8 +13,11 @@
  *      to Home Room" (the portal launcher URL is intercepted). A second page holds the
  *      mock's first load open and leaves during it: the start-up's first save still happens
  *      before the navigation (one tracked start-up operation, R007).
+ *      Then the phone pass (class standard rules 6.4 and 6.6): at 375 x 667 the dark-only
+ *      page has no sideways scroll and the transport buttons are at least 44 x 44.
  *
  *   npm run e2e            (needs `npx playwright install chromium` once)
+ *   E2E_SHOTS_DIR=<dir>    screenshots go there instead of e2e-artifacts/ (gitignored)
  */
 import { execFileSync, spawn, type ChildProcess } from "node:child_process";
 import net from "node:net";
@@ -28,6 +31,8 @@ const HEADERS: Record<string, string> = {
   "x-frame-options": "DENY",
   "permissions-policy": "camera=(), microphone=(), geolocation=()",
 };
+
+const SHOTS_DIR = process.env.E2E_SHOTS_DIR || "e2e-artifacts";
 
 function log(msg: string) {
   process.stdout.write(`[e2e] ${msg}\n`);
@@ -211,6 +216,117 @@ async function leaveDuringDelayedFirstLoad(browser: Awaited<ReturnType<typeof ch
   }
 }
 
+/**
+ * Phone screen (dark-mode and phone plan, 2026-10-08; class standard 6.4, 6.6). KATAS is
+ * dark-only, so there is one theme to check: at 375 x 667 the page carries
+ * data-theme="dark" and color-scheme dark, never scrolls sideways (also with the bunkai
+ * card, the copied link and the error banner showing), the control bar scrolls inside
+ * itself instead of covering the dojo, the transport buttons are at least 44 x 44 and in
+ * view without scrolling the bar, and the HUD text meets the phone sizes. The 404 page
+ * (rendered by the Next shell's layout) is dark too.
+ */
+async function phoneScreen(browser: Awaited<ReturnType<typeof chromium.launch>>, base: string) {
+  const context = await browser.newContext({ viewport: { width: 375, height: 667 } });
+  try {
+    const page = await context.newPage();
+    await page.goto(`${base}/`, { waitUntil: "load" });
+    await page.waitForFunction(() => document.querySelectorAll("#kata-select option").length === 5, null, { timeout: 30_000 });
+    type Box = { w: number; h: number; top: number; bottom: number; left: number; right: number };
+    // No named helpers inside evaluate: tsx (esbuild keepNames) would wrap them in __name,
+    // which does not exist in the page.
+    const m = await page.evaluate(() => {
+      const [controlsBox, prev, play, next, home] = ["#controls", "#btn-prev", "#btn-play", "#btn-next", "#home-room"].map((sel) => {
+        const r = document.querySelector(sel)!.getBoundingClientRect();
+        return { w: r.width, h: r.height, top: r.top, bottom: r.bottom, left: r.left, right: r.right };
+      });
+      const [stepFont, timeFont, presetFont] = ["#step-label", "#time-readout", "#camera-presets button"].map((sel) =>
+        parseFloat(getComputedStyle(document.querySelector(sel)!).fontSize),
+      );
+      const html = document.documentElement;
+      const controls = document.getElementById("controls")!;
+      return {
+        theme: html.getAttribute("data-theme"),
+        scheme: getComputedStyle(html).colorScheme,
+        scrollWidth: html.scrollWidth,
+        innerWidth: window.innerWidth,
+        innerHeight: window.innerHeight,
+        controls: controlsBox,
+        controlsOverflowY: getComputedStyle(controls).overflowY,
+        controlsScrollTop: controls.scrollTop,
+        transport: [prev, play, next],
+        home,
+        stepFont,
+        timeFont,
+        presetFont,
+      };
+    });
+    expectEq(m.theme, "dark", "phone: data-theme");
+    expectEq(m.scheme, "dark", "phone: color-scheme");
+    expectEq(m.scrollWidth <= m.innerWidth, true, `phone: no sideways scroll (scrollWidth ${m.scrollWidth}, innerWidth ${m.innerWidth})`);
+    expectEq(m.controlsOverflowY, "auto", "phone: the control bar scrolls inside itself");
+    expectEq(m.controls.h <= m.innerHeight * 0.45, true, `phone: control bar capped (${m.controls.h} px of ${m.innerHeight})`);
+    expectEq(m.controlsScrollTop, 0, "phone: control bar starts at the top");
+    const inView = (b: Box) => b.left >= 0 && b.right <= m.innerWidth && b.top >= 0 && b.bottom <= m.innerHeight;
+    m.transport.forEach((b: Box, i: number) => {
+      const name = ["prev", "play", "next"][i];
+      expectEq(b.w >= 44 && b.h >= 44, true, `phone: ${name} button ${b.w.toFixed(1)} x ${b.h.toFixed(1)} is at least 44 x 44`);
+      expectEq(inView(b), true, `phone: ${name} button in view`);
+    });
+    expectEq(m.home.h >= 44 && inView(m.home), true, `phone: Return to Home Room ${m.home.h} px tall, in view`);
+    expectEq(m.stepFont >= 16, true, `phone: step label ${m.stepFont} px`);
+    expectEq(m.timeFont >= 13 && m.presetFont >= 13, true, `phone: captions ${m.timeFont} / ${m.presetFont} px`);
+    await page.screenshot({ path: `${SHOTS_DIR}/katas-phone-375.png` });
+    log(`phone: 375 x 667 dark, no sideways scroll; transport ${m.transport.map((b: Box) => `${b.w.toFixed(0)}x${b.h.toFixed(0)}`).join(" ")}; bar ${m.controls.h.toFixed(0)} px`);
+
+    // Everything optional showing at once: bunkai card, copied link, error banner.
+    await page.evaluate(() => {
+      (document.getElementById("toggle-bunkai") as HTMLInputElement).click();
+      (document.getElementById("btn-link") as HTMLButtonElement).click();
+      const banner = document.getElementById("error-banner")!;
+      banner.textContent = "Could not load the kata data. Check your connection and reload the page.";
+      banner.classList.remove("hidden");
+    });
+    await page.waitForFunction(() => !document.getElementById("link-out")!.classList.contains("hidden"), null, { timeout: 10_000 });
+    const busy = await page.evaluate(() => {
+      const bannerEl = document.getElementById("error-banner")!;
+      const text = document.createRange();
+      text.selectNodeContents(bannerEl);
+      return {
+        scrollWidth: document.documentElement.scrollWidth,
+        innerWidth: window.innerWidth,
+        bannerPaddingRight: parseFloat(getComputedStyle(bannerEl).paddingRight),
+        bannerTextTop: text.getBoundingClientRect().top,
+        homeBottom: document.getElementById("home-room")!.getBoundingClientRect().bottom,
+        bunkaiFont: parseFloat(getComputedStyle(document.getElementById("bunkai-card")!).fontSize),
+        linkRight: document.getElementById("link-out")!.getBoundingClientRect().right,
+      };
+    });
+    expectEq(busy.scrollWidth <= busy.innerWidth, true, `phone: no sideways scroll with everything showing (${busy.scrollWidth})`);
+    expectEq(busy.linkRight <= busy.innerWidth, true, "phone: the copied link fits");
+    expectEq(busy.bannerPaddingRight <= 16, true, `phone: error banner right padding ${busy.bannerPaddingRight} px`);
+    expectEq(busy.bannerTextTop >= busy.homeBottom, true, "phone: error banner text starts below the Home Room button");
+    expectEq(busy.bunkaiFont >= 16, true, `phone: bunkai card ${busy.bunkaiFont} px`);
+    await page.screenshot({ path: `${SHOTS_DIR}/katas-phone-375-busy.png` });
+    log("phone: bunkai card, copied link and error banner all fit at 375");
+
+    const res = await page.goto(`${base}/no-such-page`, { waitUntil: "load" });
+    expectEq(res?.status(), 404, "phone: 404 status");
+    const nf = await page.evaluate(() => ({
+      theme: document.documentElement.getAttribute("data-theme"),
+      bg: getComputedStyle(document.body).backgroundColor,
+      scrollWidth: document.documentElement.scrollWidth,
+      innerWidth: window.innerWidth,
+    }));
+    expectEq(nf.theme, "dark", "404 data-theme");
+    expectEq(nf.bg, "rgb(26, 20, 14)", "404 background");
+    expectEq(nf.scrollWidth <= nf.innerWidth, true, "404: no sideways scroll");
+    await page.screenshot({ path: `${SHOTS_DIR}/katas-404-375.png` });
+    log("phone: the 404 page is dark");
+  } finally {
+    await context.close();
+  }
+}
+
 async function viewerInDevelopmentMode() {
   const port = await freePort();
   const base = `http://localhost:${port}`;
@@ -237,8 +353,8 @@ async function viewerInDevelopmentMode() {
     expectEq((await glb.body()).subarray(0, 4).toString("latin1"), "glTF", "karateka.glb magic");
     for (let i = 0; i < 60 && !avatarLog.some((l) => l === "karateka: glb active" || /rejected|failed/.test(l)); i++) await page.waitForTimeout(250);
     expectEq(avatarLog.find((l) => l === "karateka: glb active" || /rejected|failed/.test(l)), "karateka: glb active", "avatar adopted the GLB");
-    await page.screenshot({ path: "e2e-artifacts/katas-glb-avatar.png" });
-    log(`dev: karateka.glb 200 (${glbType || "no type"}), adopted; screenshot e2e-artifacts/katas-glb-avatar.png`);
+    await page.screenshot({ path: `${SHOTS_DIR}/katas-glb-avatar.png` });
+    log(`dev: karateka.glb 200 (${glbType || "no type"}), adopted; screenshot ${SHOTS_DIR}/katas-glb-avatar.png`);
     await page.waitForFunction(() => document.querySelectorAll("#kata-select option").length === 5, null, { timeout: 30_000 });
     expectEq(await page.locator("#error-banner").isVisible(), false, "error banner hidden");
     await page.waitForFunction(() => ((window as unknown as { __kitAwards?: Award[] }).__kitAwards ?? []).length >= 1, null, { timeout: 30_000 });
@@ -377,6 +493,7 @@ async function viewerInDevelopmentMode() {
     log("dev: repository paths are 404, the viewer page is 200");
 
     await leaveDuringDelayedFirstLoad(browser, base);
+    await phoneScreen(browser, base);
   } finally {
     // Nested so the dev server is stopped even when the browser never launched or
     // refuses to close.
