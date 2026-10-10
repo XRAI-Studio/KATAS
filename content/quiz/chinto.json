@@ -1,0 +1,260 @@
+{
+  "kata": "chinto",
+  "title": "Chinto",
+  "steps": 33,
+  "questions": [
+    {
+      "id": "chinto-01",
+      "category": "movement",
+      "prompt": "In which direction does Chinto begin?",
+      "choices": [
+        "Straight ahead",
+        "45 degrees to the left of front",
+        "Directly to the rear",
+        "To the right side"
+      ],
+      "answer": 1,
+      "step": 1
+    },
+    {
+      "id": "chinto-02",
+      "category": "movement",
+      "prompt": "What is the first hand position after stepping back to cat?",
+      "choices": [
+        "Fists at the hips",
+        "Hands crossed in an X-guard at the solar plexus, left on top",
+        "Double high block",
+        "Open hands at the sides"
+      ],
+      "answer": 1,
+      "step": 1
+    },
+    {
+      "id": "chinto-03",
+      "category": "movement",
+      "prompt": "What does the right hand do after the open-hand block at step 2?",
+      "choices": [
+        "A backfist",
+        "A hammerfist into the left palm, then the arm is pulled across and seized at the forearm",
+        "A low block",
+        "A finger thrust"
+      ],
+      "answer": 1,
+      "step": 2
+    },
+    {
+      "id": "chinto-04",
+      "category": "movement",
+      "prompt": "Step 13 has a jump. What follows the jump front kick?",
+      "choices": [
+        "A landing into a low X-block against a kick",
+        "A spin",
+        "A bow",
+        "A backfist"
+      ],
+      "answer": 0,
+      "step": 13
+    },
+    {
+      "id": "chinto-05",
+      "category": "movement",
+      "prompt": "What does step 29 depict?",
+      "choices": [
+        "A jump",
+        "Being grabbed from behind, turning and striking both fists to the kidneys",
+        "A front kick",
+        "A low block"
+      ],
+      "answer": 1,
+      "step": 29
+    },
+    {
+      "id": "chinto-06",
+      "category": "movement",
+      "prompt": "How does Chinto end?",
+      "choices": [
+        "With a jump",
+        "Stand up from the kneeling punch, return to the ready hand position, then set and bow",
+        "With a dump",
+        "With a double collarbone strike"
+      ],
+      "answer": 1,
+      "step": 32
+    },
+    {
+      "id": "chinto-07",
+      "category": "bunkai",
+      "prompt": "What is the X-guard at the start for?",
+      "choices": [
+        "Decoration",
+        "Covering against an incoming strike while angling off the line",
+        "Blocking a kick to the shin",
+        "Signalling the start"
+      ],
+      "answer": 1,
+      "step": 1
+    },
+    {
+      "id": "chinto-08",
+      "category": "bunkai",
+      "prompt": "The reinforced-block position with the left hand gripping the right forearm sets up what?",
+      "choices": [
+        "A kick",
+        "An arm bar, shoulder lock or arm break",
+        "A jump",
+        "A bow"
+      ],
+      "answer": 1,
+      "step": 3
+    },
+    {
+      "id": "chinto-09",
+      "category": "bunkai",
+      "prompt": "Step 19 grabs the hair. Then what?",
+      "choices": [
+        "Let go",
+        "Pull the head down and smash it onto the leg as a takedown",
+        "Punch the air",
+        "Step back"
+      ],
+      "answer": 1,
+      "step": 19
+    },
+    {
+      "id": "chinto-10",
+      "category": "bunkai",
+      "prompt": "What is the elbow at step 26 doing?",
+      "choices": [
+        "Striking the head",
+        "Shielding the groin against a kick, or striking",
+        "Blocking a punch to the face",
+        "Nothing"
+      ],
+      "answer": 1,
+      "step": 26
+    },
+    {
+      "id": "chinto-11",
+      "category": "bunkai",
+      "prompt": "What is Chinto's main tactical idea?",
+      "choices": [
+        "Straight-line charging",
+        "Off-line angling, arm control, leg checks and close-range finishes",
+        "Ground fighting",
+        "Long-range kicking"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "chinto-12",
+      "category": "kiai",
+      "prompt": "Where is the big kiai in Chinto?",
+      "choices": [
+        "On the opening X-guard",
+        "On the kick at step 30 from the fighting posture",
+        "On the hair grab",
+        "On the bow"
+      ],
+      "answer": 1,
+      "step": 30
+    },
+    {
+      "id": "chinto-13",
+      "category": "kiai",
+      "prompt": "Where do the sharper exhales fall in Chinto?",
+      "choices": [
+        "Only on the bow",
+        "On hammerfists, dumps and the finishing sequences",
+        "On the cat stances",
+        "On every step"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "chinto-14",
+      "category": "balance",
+      "prompt": "What is special about the Chinto stance?",
+      "choices": [
+        "It is a wide horse stance",
+        "It is a deliberate one-legged, angled stance, not just a strange front stance",
+        "It is done on the knees",
+        "It has both feet together"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "chinto-15",
+      "category": "balance",
+      "prompt": "What is the T-stance used for throughout Chinto?",
+      "choices": [
+        "Resting",
+        "Angling off, covering the centre line and re-centring the floor pattern",
+        "Kicking high",
+        "Sitting down"
+      ],
+      "answer": 1,
+      "step": 20
+    },
+    {
+      "id": "chinto-16",
+      "category": "balance",
+      "prompt": "What is the most common error in the jump and X-block sequence?",
+      "choices": [
+        "Jumping too high",
+        "Rushing it and losing structure and landing control",
+        "Landing too softly",
+        "Breathing out"
+      ],
+      "answer": 1,
+      "step": 13
+    },
+    {
+      "id": "chinto-17",
+      "category": "history",
+      "prompt": "Which style did Chinto come to Isshin Ryu from?",
+      "choices": [
+        "Shorin-ryu",
+        "Goju-ryu",
+        "Uechi-ryu",
+        "Judo"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "chinto-18",
+      "category": "history",
+      "prompt": "Who is Chinto traditionally named after?",
+      "choices": [
+        "A shipwrecked Chinese sailor who fought Bushi Matsumura",
+        "An Okinawan king",
+        "A Japanese sword master",
+        "A monk from India"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "chinto-19",
+      "category": "history",
+      "prompt": "What terrain is Chinto associated with?",
+      "choices": [
+        "Open beach",
+        "Fighting on a slope or narrow ground, which explains the diagonal line and one-leg work",
+        "A boxing ring",
+        "A forest"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "chinto-20",
+      "category": "history",
+      "prompt": "When is Chinto usually taught?",
+      "choices": [
+        "First",
+        "As an intermediate kata, often after Wansu",
+        "Before Seisan",
+        "Only to instructors"
+      ],
+      "answer": 1
+    }
+  ]
+}

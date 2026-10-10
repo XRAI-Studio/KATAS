@@ -1,0 +1,259 @@
+{
+  "kata": "seiunchin",
+  "title": "Seiunchin",
+  "steps": 21,
+  "questions": [
+    {
+      "id": "seiunchin-01",
+      "category": "movement",
+      "prompt": "How does Seiunchin begin from ready?",
+      "choices": [
+        "Look left and slide the right foot forward into Seiunchin stance",
+        "Jump forward",
+        "Step back into cat stance",
+        "Turn 180 degrees"
+      ],
+      "answer": 0,
+      "step": 1
+    },
+    {
+      "id": "seiunchin-02",
+      "category": "movement",
+      "prompt": "The opening sequence repeats on three angles. What ends each one?",
+      "choices": [
+        "A front kick",
+        "A grab and pull into a nukite thrust",
+        "A backfist",
+        "An elbow"
+      ],
+      "answer": 1,
+      "step": 1
+    },
+    {
+      "id": "seiunchin-03",
+      "category": "movement",
+      "prompt": "At step 5 you slide forward into Seisan with a reinforced punch. What follows it?",
+      "choices": [
+        "A low block",
+        "Grab behind the head with the left and a right rising elbow to the face",
+        "A jump kick",
+        "A double low block"
+      ],
+      "answer": 1,
+      "step": 5
+    },
+    {
+      "id": "seiunchin-04",
+      "category": "movement",
+      "prompt": "What is the 'archer block' at steps 8 and 9 used against?",
+      "choices": [
+        "A punch to the head",
+        "A front kick, with the high arm covering",
+        "A rear grab",
+        "A sweep"
+      ],
+      "answer": 1,
+      "step": 8
+    },
+    {
+      "id": "seiunchin-05",
+      "category": "movement",
+      "prompt": "How far do you pivot at step 11?",
+      "choices": [
+        "90 degrees",
+        "180 degrees",
+        "225 degrees counter-clockwise into Seisan on the back-left corner",
+        "360 degrees"
+      ],
+      "answer": 2,
+      "step": 11
+    },
+    {
+      "id": "seiunchin-06",
+      "category": "movement",
+      "prompt": "What is the closing gesture of Seiunchin?",
+      "choices": [
+        "A final kiai kick",
+        "Elbows brought down to break a middle grab, then the right heel drops to settle",
+        "A leg scoop and throw",
+        "A double collarbone strike"
+      ],
+      "answer": 1,
+      "step": 20
+    },
+    {
+      "id": "seiunchin-07",
+      "category": "bunkai",
+      "prompt": "In the opening sequence, what do the open hands going up and out represent?",
+      "choices": [
+        "A salute",
+        "Breaking a grab",
+        "Catching a kick",
+        "Signalling the next attacker"
+      ],
+      "answer": 1,
+      "step": 1
+    },
+    {
+      "id": "seiunchin-08",
+      "category": "bunkai",
+      "prompt": "The nukite at the end of the opening sequence targets what?",
+      "choices": [
+        "The knee",
+        "The throat or solar plexus",
+        "The elbow",
+        "The foot"
+      ],
+      "answer": 1,
+      "step": 1
+    },
+    {
+      "id": "seiunchin-09",
+      "category": "bunkai",
+      "prompt": "At step 4 you shift back to cat and catch with the left hand. What is being caught?",
+      "choices": [
+        "A thrown weapon",
+        "A low kick or punch, followed by a backfist to the limb",
+        "The attacker's hair",
+        "Your own balance"
+      ],
+      "answer": 1,
+      "step": 4
+    },
+    {
+      "id": "seiunchin-10",
+      "category": "bunkai",
+      "prompt": "The uppercut, shote, backfist, low strike sequence at steps 12 and 15 is what kind of fighting?",
+      "choices": [
+        "Long-range kicking",
+        "An inside clinch sequence: lift the body, check the incoming shot, head shot, then a groin or leg finish",
+        "Ground fighting",
+        "Weapon defence"
+      ],
+      "answer": 1,
+      "step": 12
+    },
+    {
+      "id": "seiunchin-11",
+      "category": "bunkai",
+      "prompt": "What does the twist-punch at step 18 do?",
+      "choices": [
+        "Strikes the face",
+        "Blocks an incoming kick, striking the shin or ankle",
+        "Breaks a wrist grab",
+        "Sets up a throw"
+      ],
+      "answer": 1,
+      "step": 18
+    },
+    {
+      "id": "seiunchin-12",
+      "category": "kiai",
+      "prompt": "Where is the kiai in Seiunchin?",
+      "choices": [
+        "On the opening slide",
+        "On the final counter at step 19: push-down block and right backfist to the face",
+        "On the archer block",
+        "On the closing bow"
+      ],
+      "answer": 1,
+      "step": 19
+    },
+    {
+      "id": "seiunchin-13",
+      "category": "kiai",
+      "prompt": "What kind of breathing suits Seiunchin?",
+      "choices": [
+        "Fast and shallow",
+        "Strong, compressed breathing matched to slow heavy movements, with a sharp exhale on key impacts",
+        "Hold until the end",
+        "Loud breathing on every step"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "seiunchin-14",
+      "category": "balance",
+      "prompt": "What are the stance cues for a good Seiunchin stance?",
+      "choices": [
+        "Knees locked and back arched",
+        "Knees flexed, pelvis tucked slightly, weight evenly grounded",
+        "All weight on the front foot",
+        "Heels raised"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "seiunchin-15",
+      "category": "balance",
+      "prompt": "Which common error collapses the Seiunchin stance?",
+      "choices": [
+        "Knees inward or the back too straight",
+        "Looking at the attacker",
+        "Breathing out",
+        "Keeping the elbows in"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "seiunchin-16",
+      "category": "balance",
+      "prompt": "What is the overall feel of the kata?",
+      "choices": [
+        "Light and bouncy",
+        "Slower and heavier with pressure throughout, and strong stance transitions",
+        "As fast as possible",
+        "Mostly kicks"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "seiunchin-17",
+      "category": "history",
+      "prompt": "Seiunchin is usually taught at what point?",
+      "choices": [
+        "First kata",
+        "Early to mid kyu level, often after Seisan",
+        "Black belt only",
+        "Only with the bo"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "seiunchin-18",
+      "category": "history",
+      "prompt": "Which Okinawan tradition is Seiunchin associated with in Isshin Ryu's lineage?",
+      "choices": [
+        "Naha-te through Goju-ryu",
+        "Kobudo weapons",
+        "Judo",
+        "Tomari-te only"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "seiunchin-19",
+      "category": "history",
+      "prompt": "What is the floor pattern of Seiunchin?",
+      "choices": [
+        "A wide circle",
+        "Mostly forward and back on the centre line with 45 degree entries and two diagonal pivots",
+        "A square",
+        "Sideways only"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "seiunchin-20",
+      "category": "history",
+      "prompt": "What is the main tactical theme of Seiunchin?",
+      "choices": [
+        "Long-range kicking",
+        "Close-range control, seizing, low-line strikes and kick defences",
+        "Jumping techniques",
+        "Weapon disarms"
+      ],
+      "answer": 1
+    }
+  ]
+}

@@ -1,0 +1,256 @@
+{
+  "kata": "naihanchi",
+  "title": "Naihanchi",
+  "steps": 16,
+  "questions": [
+    {
+      "id": "naihanchi-01",
+      "category": "movement",
+      "prompt": "How does Naihanchi travel?",
+      "choices": [
+        "Forward and back",
+        "Side to side on one line, never forward or back",
+        "In a circle",
+        "Diagonally"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "naihanchi-02",
+      "category": "movement",
+      "prompt": "What is the first movement into stance?",
+      "choices": [
+        "Step straight forward",
+        "Right foot crosses over in front of the left, left foot steps out into Naihanchi stance to the left",
+        "Jump to the right",
+        "Step back into cat"
+      ],
+      "answer": 1,
+      "step": 1
+    },
+    {
+      "id": "naihanchi-03",
+      "category": "movement",
+      "prompt": "What does the first hand technique combine?",
+      "choices": [
+        "A left haito middle block, grab and pull into a right elbow",
+        "A double high block",
+        "A right front kick",
+        "Two straight punches"
+      ],
+      "answer": 0,
+      "step": 1
+    },
+    {
+      "id": "naihanchi-04",
+      "category": "movement",
+      "prompt": "What is the leg doing at steps 2, 5, 6 and 9?",
+      "choices": [
+        "Resting",
+        "A small lift to avoid a sweep, or a side blade kick",
+        "A high roundhouse",
+        "A jumping kick"
+      ],
+      "answer": 1,
+      "step": 2
+    },
+    {
+      "id": "naihanchi-05",
+      "category": "movement",
+      "prompt": "Step 4 is a four-count combination. Which of these is in it?",
+      "choices": [
+        "A jump front kick",
+        "A middle haito block, a low bone block with an elbow, then a backfist to the face with the other arm guarding",
+        "A leg scoop",
+        "A double collarbone strike"
+      ],
+      "answer": 1,
+      "step": 4
+    },
+    {
+      "id": "naihanchi-06",
+      "category": "movement",
+      "prompt": "What are the crossover steps at steps 3 and 10 for?",
+      "choices": [
+        "Striking",
+        "Transition to the other side of the line",
+        "Kiai",
+        "Turning 180 degrees"
+      ],
+      "answer": 1,
+      "step": 3
+    },
+    {
+      "id": "naihanchi-07",
+      "category": "bunkai",
+      "prompt": "The side entry haito, grab-and-pull and elbow at steps 1 and 8 answer what?",
+      "choices": [
+        "A kick from the front",
+        "A side attack or grab at close range",
+        "A rear bear hug",
+        "A weapon thrown from distance"
+      ],
+      "answer": 1,
+      "step": 1
+    },
+    {
+      "id": "naihanchi-08",
+      "category": "bunkai",
+      "prompt": "Why does Naihanchi keep lifting a leg?",
+      "choices": [
+        "To stretch",
+        "To defend against sweeps and low kicks while keeping the base",
+        "To kick the head",
+        "For show"
+      ],
+      "answer": 1,
+      "step": 2
+    },
+    {
+      "id": "naihanchi-09",
+      "category": "bunkai",
+      "prompt": "The straight punch to the side with the other hand guarding the solar plexus, at steps 7 and 14, shows what idea?",
+      "choices": [
+        "Attack only",
+        "Defence and counter at the same moment",
+        "Retreat",
+        "A throw"
+      ],
+      "answer": 1,
+      "step": 7
+    },
+    {
+      "id": "naihanchi-10",
+      "category": "bunkai",
+      "prompt": "Whose fighting ideas is the elbow-heavy close range work of Naihanchi often linked to?",
+      "choices": [
+        "Choki Motobu",
+        "Bruce Lee",
+        "Jigoro Kano",
+        "Gichin Funakoshi"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "naihanchi-11",
+      "category": "bunkai",
+      "prompt": "The high block, low bone block, elbow and backfist at steps 4 and 11 give what?",
+      "choices": [
+        "Long-range kicking",
+        "Layered defence and offence at clinch distance",
+        "A takedown",
+        "A weapon disarm"
+      ],
+      "answer": 1,
+      "step": 4
+    },
+    {
+      "id": "naihanchi-12",
+      "category": "kiai",
+      "prompt": "Where do the sharper exhales fall in Naihanchi?",
+      "choices": [
+        "On the crossover steps",
+        "On the elbows, backfists and straight punches",
+        "On the bow",
+        "Nowhere"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "naihanchi-13",
+      "category": "kiai",
+      "prompt": "What is the character of Naihanchi's movements?",
+      "choices": [
+        "Large and sweeping",
+        "Compact with crisp snaps",
+        "Slow and soft",
+        "Jumping"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "naihanchi-14",
+      "category": "balance",
+      "prompt": "What is the most common stance error in Naihanchi?",
+      "choices": [
+        "Letting the stance walk forward or back off the line",
+        "Bending the knees",
+        "Keeping the guard up",
+        "Looking left"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "naihanchi-15",
+      "category": "balance",
+      "prompt": "Why should you stay low in Naihanchi stance?",
+      "choices": [
+        "To hide",
+        "So the sweep defences and low blocks stay realistic and the base stays strong",
+        "To kick higher",
+        "To see under the attacker"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "naihanchi-16",
+      "category": "balance",
+      "prompt": "Where does the power come from in the haito and bone blocks?",
+      "choices": [
+        "The fingers",
+        "Hip twist and compression in the stance",
+        "Jumping",
+        "The elbow alone"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "naihanchi-17",
+      "category": "history",
+      "prompt": "Naihanchi comes into Isshin Ryu from which tradition?",
+      "choices": [
+        "Shorin-ryu, with Motobu-style close-range ideas",
+        "Goju-ryu",
+        "Uechi-ryu",
+        "Kobudo"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "naihanchi-18",
+      "category": "history",
+      "prompt": "Naihanchi is usually introduced when?",
+      "choices": [
+        "Before Seisan",
+        "Early to mid kyu",
+        "Black belt only",
+        "Never"
+      ],
+      "answer": 1
+    },
+    {
+      "id": "naihanchi-19",
+      "category": "history",
+      "prompt": "What is another name for the Naihanchi kata family in Japanese karate?",
+      "choices": [
+        "Tekki",
+        "Heian",
+        "Bassai",
+        "Kanku"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "naihanchi-20",
+      "category": "history",
+      "prompt": "What is the key theme of the whole kata?",
+      "choices": [
+        "Long-distance sparring",
+        "Fighting on a line: lateral movement, elbows and a strong base",
+        "Ground fighting",
+        "Kicks to the head"
+      ],
+      "answer": 1
+    }
+  ]
+}

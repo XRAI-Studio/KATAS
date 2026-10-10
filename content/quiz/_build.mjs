@@ -1,0 +1,148 @@
+// Draft quiz content for the KATAS course. Run: node content/quiz/_build.mjs
+// Writes content/quiz/<kata>.json. Edit the arrays below, not the JSON.
+// Question shape follows the school portal design spec (§7.5):
+//   { id, category, prompt, choices[], answer (index), step? (viewer step index) }
+// Categories: movement | bunkai | kiai | balance | history
+import { writeFileSync } from "node:fs";
+
+const q = (category, prompt, choices, answer, step) =>
+  step === undefined ? { category, prompt, choices, answer } : { category, prompt, choices, answer, step };
+
+const katas = {
+  seisan: {
+    title: "Seisan",
+    steps: 23,
+    questions: [
+      q("movement", "Seisan opens with three advancing steps. What does the first step combine?", ["A left middle block followed by a right punch", "A double high block", "A right front kick", "A left backfist"], 0, 1),
+      q("movement", "After the three advancing punches, what technique is done with a shuffle forward?", ["Double low shuto block", "Double high block", "Left middle shuto block", "Heel scoop and throw"], 1, 4),
+      q("movement", "At step 5 you pivot 180 degrees to face the rear. What do the hands do?", ["Double low shuto block or strike", "Double high block", "Right backfist", "Grab and pull"], 0, 5),
+      q("movement", "What is the rhythm of the block, two punches, kick, punch combination on the side lines?", ["One long beat", "A 1-2-3-4 rhythm: block, two punches, kick, punch", "Two beats with a long pause", "Everything at once"], 1, 9),
+      q("movement", "Which stance do you drop into after the front-line combination at step 11?", ["Cat stance", "Naihanchi stance", "Seiunchin stance", "Chinto stance"], 2, 11),
+      q("movement", "How does Seisan end after the final punch?", ["Three fast punches", "A jump kick", "A step back to cat, a heel scoop with the left hand and a shote across the foot as a throw, then bow", "A double collarbone strike"], 2, 22),
+      q("bunkai", "In the bunkai for steps 1 to 4, what is the retracting hand used for?", ["Nothing, it just returns to the hip", "Wrist control, elbow lock or a takedown", "Blocking a kick", "Signalling the next attacker"], 1, 1),
+      q("bunkai", "The shote, haito, low shuto and grab-and-pull sequence at steps 6 to 8 is mainly about what?", ["Long-range kicking", "High-line defence, limb clearing, low strikes and arm control", "Ground fighting", "Escaping a rear bear hug"], 1, 6),
+      q("bunkai", "In the side-line combination, what job does the final punch do?", ["It finishes the attacker after their attack was stopped and their structure disrupted", "It is only for show", "It warns the next attacker", "It resets your stance"], 0, 9),
+      q("bunkai", "What is the end-of-fight idea behind the leg scoop and throw at the close?", ["Bow to the judges", "Dump the leg so the attacker cannot pursue", "Stretch the hamstring", "Start the kata again"], 1, 22),
+      q("bunkai", "The backfist from side stance at step 13 targets what?", ["The knee", "The jaw, temple, or the hand holding a weapon", "The foot", "The shoulder blade"], 1, 13),
+      q("kiai", "Where does the main kiai in Seisan usually fall?", ["On the opening bow", "On the first middle block", "On the final kick-land-punch with the right punch", "On the double high block"], 2, 21),
+      q("kiai", "How should breathing work on the big techniques of Seisan?", ["Hold the breath throughout", "Natural breathing with a sharper exhale on major techniques and a longer breath on the final sequence", "Breathe in on every punch", "Only breathe between steps"], 1),
+      q("balance", "What goes wrong if the Seisan stance gets too long or too narrow?", ["Nothing, both are fine", "Stability and power are lost", "It becomes a cat stance", "You cannot see the attacker"], 1),
+      q("balance", "What is the role of the cat stance between sequences in Seisan?", ["To rest", "A light front leg and readiness for lateral movement or a new opponent", "To kick higher", "To hide the hands"], 1, 12),
+      q("balance", "Which is the rooted stance Seisan drops into for finishing moves?", ["Seiunchin", "Cat stance", "Heiko", "Musubi"], 0),
+      q("history", "Which Okinawan style is the Isshin Ryu Seisan derived from?", ["Goju-ryu", "Shorin-ryu", "Uechi-ryu", "Shotokan"], 1),
+      q("history", "Seisan is usually introduced when in Isshin Ryu?", ["As a black belt kata", "As the first empty-hand kata after basics", "Only after Chinto", "Only with weapons"], 1),
+      q("history", "What fist does Isshin Ryu use for the punches in Seisan?", ["A horizontal twisting fist", "A vertical fist that returns quickly to chamber", "An open palm", "A hammerfist only"], 1),
+      q("history", "What overall shape does Seisan's floor pattern make?", ["A circle", "A cross or H: straight forward, a 180 turn, then 90 degree side lines back to the front", "A triangle", "A single straight line"], 1),
+    ],
+  },
+  seiunchin: {
+    title: "Seiunchin",
+    steps: 21,
+    questions: [
+      q("movement", "How does Seiunchin begin from ready?", ["Look left and slide the right foot forward into Seiunchin stance", "Jump forward", "Step back into cat stance", "Turn 180 degrees"], 0, 1),
+      q("movement", "The opening sequence repeats on three angles. What ends each one?", ["A front kick", "A grab and pull into a nukite thrust", "A backfist", "An elbow"], 1, 1),
+      q("movement", "At step 5 you slide forward into Seisan with a reinforced punch. What follows it?", ["A low block", "Grab behind the head with the left and a right rising elbow to the face", "A jump kick", "A double low block"], 1, 5),
+      q("movement", "What is the 'archer block' at steps 8 and 9 used against?", ["A punch to the head", "A front kick, with the high arm covering", "A rear grab", "A sweep"], 1, 8),
+      q("movement", "How far do you pivot at step 11?", ["90 degrees", "180 degrees", "225 degrees counter-clockwise into Seisan on the back-left corner", "360 degrees"], 2, 11),
+      q("movement", "What is the closing gesture of Seiunchin?", ["A final kiai kick", "Elbows brought down to break a middle grab, then the right heel drops to settle", "A leg scoop and throw", "A double collarbone strike"], 1, 20),
+      q("bunkai", "In the opening sequence, what do the open hands going up and out represent?", ["A salute", "Breaking a grab", "Catching a kick", "Signalling the next attacker"], 1, 1),
+      q("bunkai", "The nukite at the end of the opening sequence targets what?", ["The knee", "The throat or solar plexus", "The elbow", "The foot"], 1, 1),
+      q("bunkai", "At step 4 you shift back to cat and catch with the left hand. What is being caught?", ["A thrown weapon", "A low kick or punch, followed by a backfist to the limb", "The attacker's hair", "Your own balance"], 1, 4),
+      q("bunkai", "The uppercut, shote, backfist, low strike sequence at steps 12 and 15 is what kind of fighting?", ["Long-range kicking", "An inside clinch sequence: lift the body, check the incoming shot, head shot, then a groin or leg finish", "Ground fighting", "Weapon defence"], 1, 12),
+      q("bunkai", "What does the twist-punch at step 18 do?", ["Strikes the face", "Blocks an incoming kick, striking the shin or ankle", "Breaks a wrist grab", "Sets up a throw"], 1, 18),
+      q("kiai", "Where is the kiai in Seiunchin?", ["On the opening slide", "On the final counter at step 19: push-down block and right backfist to the face", "On the archer block", "On the closing bow"], 1, 19),
+      q("kiai", "What kind of breathing suits Seiunchin?", ["Fast and shallow", "Strong, compressed breathing matched to slow heavy movements, with a sharp exhale on key impacts", "Hold until the end", "Loud breathing on every step"], 1),
+      q("balance", "What are the stance cues for a good Seiunchin stance?", ["Knees locked and back arched", "Knees flexed, pelvis tucked slightly, weight evenly grounded", "All weight on the front foot", "Heels raised"], 1),
+      q("balance", "Which common error collapses the Seiunchin stance?", ["Knees inward or the back too straight", "Looking at the attacker", "Breathing out", "Keeping the elbows in"], 0),
+      q("balance", "What is the overall feel of the kata?", ["Light and bouncy", "Slower and heavier with pressure throughout, and strong stance transitions", "As fast as possible", "Mostly kicks"], 1),
+      q("history", "Seiunchin is usually taught at what point?", ["First kata", "Early to mid kyu level, often after Seisan", "Black belt only", "Only with the bo"], 1),
+      q("history", "Which Okinawan tradition is Seiunchin associated with in Isshin Ryu's lineage?", ["Naha-te through Goju-ryu", "Kobudo weapons", "Judo", "Tomari-te only"], 0),
+      q("history", "What is the floor pattern of Seiunchin?", ["A wide circle", "Mostly forward and back on the centre line with 45 degree entries and two diagonal pivots", "A square", "Sideways only"], 1),
+      q("history", "What is the main tactical theme of Seiunchin?", ["Long-range kicking", "Close-range control, seizing, low-line strikes and kick defences", "Jumping techniques", "Weapon disarms"], 1),
+    ],
+  },
+  naihanchi: {
+    title: "Naihanchi",
+    steps: 16,
+    questions: [
+      q("movement", "How does Naihanchi travel?", ["Forward and back", "Side to side on one line, never forward or back", "In a circle", "Diagonally"], 1),
+      q("movement", "What is the first movement into stance?", ["Step straight forward", "Right foot crosses over in front of the left, left foot steps out into Naihanchi stance to the left", "Jump to the right", "Step back into cat"], 1, 1),
+      q("movement", "What does the first hand technique combine?", ["A left haito middle block, grab and pull into a right elbow", "A double high block", "A right front kick", "Two straight punches"], 0, 1),
+      q("movement", "What is the leg doing at steps 2, 5, 6 and 9?", ["Resting", "A small lift to avoid a sweep, or a side blade kick", "A high roundhouse", "A jumping kick"], 1, 2),
+      q("movement", "Step 4 is a four-count combination. Which of these is in it?", ["A jump front kick", "A middle haito block, a low bone block with an elbow, then a backfist to the face with the other arm guarding", "A leg scoop", "A double collarbone strike"], 1, 4),
+      q("movement", "What are the crossover steps at steps 3 and 10 for?", ["Striking", "Transition to the other side of the line", "Kiai", "Turning 180 degrees"], 1, 3),
+      q("bunkai", "The side entry haito, grab-and-pull and elbow at steps 1 and 8 answer what?", ["A kick from the front", "A side attack or grab at close range", "A rear bear hug", "A weapon thrown from distance"], 1, 1),
+      q("bunkai", "Why does Naihanchi keep lifting a leg?", ["To stretch", "To defend against sweeps and low kicks while keeping the base", "To kick the head", "For show"], 1, 2),
+      q("bunkai", "The straight punch to the side with the other hand guarding the solar plexus, at steps 7 and 14, shows what idea?", ["Attack only", "Defence and counter at the same moment", "Retreat", "A throw"], 1, 7),
+      q("bunkai", "Whose fighting ideas is the elbow-heavy close range work of Naihanchi often linked to?", ["Choki Motobu", "Bruce Lee", "Jigoro Kano", "Gichin Funakoshi"], 0),
+      q("bunkai", "The high block, low bone block, elbow and backfist at steps 4 and 11 give what?", ["Long-range kicking", "Layered defence and offence at clinch distance", "A takedown", "A weapon disarm"], 1, 4),
+      q("kiai", "Where do the sharper exhales fall in Naihanchi?", ["On the crossover steps", "On the elbows, backfists and straight punches", "On the bow", "Nowhere"], 1),
+      q("kiai", "What is the character of Naihanchi's movements?", ["Large and sweeping", "Compact with crisp snaps", "Slow and soft", "Jumping"], 1),
+      q("balance", "What is the most common stance error in Naihanchi?", ["Letting the stance walk forward or back off the line", "Bending the knees", "Keeping the guard up", "Looking left"], 0),
+      q("balance", "Why should you stay low in Naihanchi stance?", ["To hide", "So the sweep defences and low blocks stay realistic and the base stays strong", "To kick higher", "To see under the attacker"], 1),
+      q("balance", "Where does the power come from in the haito and bone blocks?", ["The fingers", "Hip twist and compression in the stance", "Jumping", "The elbow alone"], 1),
+      q("history", "Naihanchi comes into Isshin Ryu from which tradition?", ["Shorin-ryu, with Motobu-style close-range ideas", "Goju-ryu", "Uechi-ryu", "Kobudo"], 0),
+      q("history", "Naihanchi is usually introduced when?", ["Before Seisan", "Early to mid kyu", "Black belt only", "Never"], 1),
+      q("history", "What is another name for the Naihanchi kata family in Japanese karate?", ["Tekki", "Heian", "Bassai", "Kanku"], 0),
+      q("history", "What is the key theme of the whole kata?", ["Long-distance sparring", "Fighting on a line: lateral movement, elbows and a strong base", "Ground fighting", "Kicks to the head"], 1),
+    ],
+  },
+  wansu: {
+    title: "Wansu",
+    steps: 24,
+    questions: [
+      q("movement", "What is the ready guard at the start of Wansu?", ["Both fists at the hips", "Left hand open with the right fist on top", "Hands crossed at the chest", "Hands behind the back"], 1, 0),
+      q("movement", "What is the first movement?", ["Turn 45 degrees left, low block and straight punch on that line", "A jump kick", "A double collarbone strike", "Step back into cat"], 0, 1),
+      q("movement", "At step 3 the open hand side block is followed by what?", ["A backfist", "A finger thrust (nukite) to the body, then the hand covers", "A low block", "A knee lift"], 1, 3),
+      q("movement", "What footwork sets up the angle punch at steps 4 and 7?", ["Stepping straight forward", "Stepping behind, one foot behind the other, to move off line", "A crossover to the side", "A spin"], 1, 4),
+      q("movement", "What do the hands do just before the dump?", ["A double high block", "They stack in front of the torso", "They chamber at the hips", "They clap"], 1, 11),
+      q("movement", "What happens at steps 8 and 9?", ["A small body shift to avoid a punch, then a straight punch and an angle punch", "Two front kicks", "A throw", "A hair grab"], 0, 8),
+      q("bunkai", "Why is Wansu called the 'dumping kata'?", ["Because it ends by dumping the hands", "Because of its signature body slam or throw near the middle", "Because it drops into low stances", "Because it drops the guard"], 1, 12),
+      q("bunkai", "What does the nukite at step 3 aim at?", ["The shin", "A soft target such as the solar plexus, neck or groin", "The forehead", "The back of the hand"], 1, 3),
+      q("bunkai", "The 'avoid, straight punch, angle punch' idea at steps 8, 9 and 16 teaches what?", ["Standing still", "Get out of the way first, then hit, then hit a secondary target", "Kick before punch", "Grab the hair"], 1, 16),
+      q("bunkai", "What do the knee lifts at steps 14 and 15 add after the side block and punch?", ["A rest", "A knee strike, or a stomp depending on the teacher", "A jump", "A turn"], 1, 14),
+      q("bunkai", "The front kicks at step 10 serve what purpose?", ["A forward entry to stop an advancing attacker", "A retreat", "A celebration", "Balance practice only"], 0, 10),
+      q("kiai", "Where do the kiai in Wansu usually fall?", ["On the first low block", "On the dump and on the final strong strikes", "On the ready guard", "On every step"], 1, 12),
+      q("kiai", "How does the pace of Wansu change?", ["It is all slow", "Medium pace with explosive bursts on the dump and the kicking combinations", "It is all as fast as possible", "It speeds up steadily to the end"], 1),
+      q("balance", "What does 'off-line' mean in Wansu's angular entries?", ["Standing on one leg", "Stepping to an angle so you are no longer on the attacker's line of attack", "Lying down", "Turning your back"], 1, 1),
+      q("balance", "What is the hardest balance moment in Wansu?", ["The ready guard", "Loading the opponent onto the hip or shoulder and pivoting for the dump, then setting the stance", "The first punch", "The bow"], 1, 12),
+      q("balance", "Why does Wansu get called the 'strong arm form'?", ["It uses only one arm", "Its strong linear punches and blocks", "It is done with weights", "It has no kicks"], 1),
+      q("history", "Which style did Wansu come into Isshin Ryu from?", ["Shorin-ryu", "Goju-ryu", "Uechi-ryu", "Kyokushin"], 0),
+      q("history", "Who is the kata traditionally said to be named after?", ["A Chinese envoy to Okinawa, Wang Ji (Wanshu)", "An Okinawan king", "A Japanese general", "A Buddhist monk"], 0),
+      q("history", "When is Wansu usually taught?", ["First", "As a mid-level kata, often after Naihanchi", "Only at black belt", "Only with sai"], 1),
+      q("history", "In the viewer, several late steps are marked 'reconstructed'. What does that mean?", ["They are wrong", "They were rebuilt from lineage descriptions rather than complete notes, and your dojo's version rules", "They should be skipped", "They are kiai points"], 1, 17),
+    ],
+  },
+  chinto: {
+    title: "Chinto",
+    steps: 33,
+    questions: [
+      q("movement", "In which direction does Chinto begin?", ["Straight ahead", "45 degrees to the left of front", "Directly to the rear", "To the right side"], 1, 1),
+      q("movement", "What is the first hand position after stepping back to cat?", ["Fists at the hips", "Hands crossed in an X-guard at the solar plexus, left on top", "Double high block", "Open hands at the sides"], 1, 1),
+      q("movement", "What does the right hand do after the open-hand block at step 2?", ["A backfist", "A hammerfist into the left palm, then the arm is pulled across and seized at the forearm", "A low block", "A finger thrust"], 1, 2),
+      q("movement", "Step 13 has a jump. What follows the jump front kick?", ["A landing into a low X-block against a kick", "A spin", "A bow", "A backfist"], 0, 13),
+      q("movement", "What does step 29 depict?", ["A jump", "Being grabbed from behind, turning and striking both fists to the kidneys", "A front kick", "A low block"], 1, 29),
+      q("movement", "How does Chinto end?", ["With a jump", "Stand up from the kneeling punch, return to the ready hand position, then set and bow", "With a dump", "With a double collarbone strike"], 1, 32),
+      q("bunkai", "What is the X-guard at the start for?", ["Decoration", "Covering against an incoming strike while angling off the line", "Blocking a kick to the shin", "Signalling the start"], 1, 1),
+      q("bunkai", "The reinforced-block position with the left hand gripping the right forearm sets up what?", ["A kick", "An arm bar, shoulder lock or arm break", "A jump", "A bow"], 1, 3),
+      q("bunkai", "Step 19 grabs the hair. Then what?", ["Let go", "Pull the head down and smash it onto the leg as a takedown", "Punch the air", "Step back"], 1, 19),
+      q("bunkai", "What is the elbow at step 26 doing?", ["Striking the head", "Shielding the groin against a kick, or striking", "Blocking a punch to the face", "Nothing"], 1, 26),
+      q("bunkai", "What is Chinto's main tactical idea?", ["Straight-line charging", "Off-line angling, arm control, leg checks and close-range finishes", "Ground fighting", "Long-range kicking"], 1),
+      q("kiai", "Where is the big kiai in Chinto?", ["On the opening X-guard", "On the kick at step 30 from the fighting posture", "On the hair grab", "On the bow"], 1, 30),
+      q("kiai", "Where do the sharper exhales fall in Chinto?", ["Only on the bow", "On hammerfists, dumps and the finishing sequences", "On the cat stances", "On every step"], 1),
+      q("balance", "What is special about the Chinto stance?", ["It is a wide horse stance", "It is a deliberate one-legged, angled stance, not just a strange front stance", "It is done on the knees", "It has both feet together"], 1),
+      q("balance", "What is the T-stance used for throughout Chinto?", ["Resting", "Angling off, covering the centre line and re-centring the floor pattern", "Kicking high", "Sitting down"], 1, 20),
+      q("balance", "What is the most common error in the jump and X-block sequence?", ["Jumping too high", "Rushing it and losing structure and landing control", "Landing too softly", "Breathing out"], 1, 13),
+      q("history", "Which style did Chinto come to Isshin Ryu from?", ["Shorin-ryu", "Goju-ryu", "Uechi-ryu", "Judo"], 0),
+      q("history", "Who is Chinto traditionally named after?", ["A shipwrecked Chinese sailor who fought Bushi Matsumura", "An Okinawan king", "A Japanese sword master", "A monk from India"], 0),
+      q("history", "What terrain is Chinto associated with?", ["Open beach", "Fighting on a slope or narrow ground, which explains the diagonal line and one-leg work", "A boxing ring", "A forest"], 1),
+      q("history", "When is Chinto usually taught?", ["First", "As an intermediate kata, often after Wansu", "Before Seisan", "Only to instructors"], 1),
+    ],
+  },
+};
+
+for (const [slug, k] of Object.entries(katas)) {
+  const questions = k.questions.map((x, i) => ({ id: `${slug}-${String(i + 1).padStart(2, "0")}`, ...x }));
+  writeFileSync(new URL(`./${slug}.json`, import.meta.url), JSON.stringify({ kata: slug, title: k.title, steps: k.steps, questions }, null, 2) + "\n");
+}
+console.log("wrote", Object.keys(katas).join(", "));
