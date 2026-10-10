@@ -45,12 +45,16 @@ function restart() {
 // under them. The viewer boots as soon as the kit is ready; katas viewed while the first
 // load is out are merged in and published once it resolves.
 const startup = (async () => {
-  const kitStart = await initKit();
+  const kitStart = await initKit({ ids: KATA_IDS });
   const sync = kitStart.kind === 'ready' ? kataProgressSync(kitStart.kit, { ids: KATA_IDS, onMismatch: restart }) : null;
   return { kitStart, sync };
 })();
 trackPending(startup.then(({ sync }) => sync?.start()));
 const { kitStart, sync } = await startup;
+// Cross-device sync (versioned kit only; a no-op otherwise): a page shown again, or restored
+// from the back/forward cache, picks up katas viewed or completed on the other device.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync?.refresh(); });
+window.addEventListener('pageshow', () => sync?.refresh());
 homeRoom.whenStaying(() => start(kitStart, sync));
 
 function start(kitStart, sync) {
@@ -198,6 +202,8 @@ if (isDevHost(location.hostname)) {
   // e2e hook (scripts/e2e.ts): reach the player without going through the UI.
   window.__katasDev = {
     player: () => player, seek: (t) => { player.seek(t); applyTime(t); }, kata: () => currentKata,
+    // The launcher-tile progress as this page holds it (cross-device sync e2e).
+    progress: () => sync?.progress(),
     // Camera state for the follow/preset e2e: orbit target, performer chest, Follow flag.
     view: () => ({ target: ctx.controls.target.toArray(), chest: chestPos.toArray(), following: ctx.following, gliding: ctx.gliding, rebase: ctx.rebaseStats }),
   };

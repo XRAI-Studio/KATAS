@@ -15,6 +15,10 @@
  *      before the navigation (one tracked start-up operation, R007).
  *      Then the phone pass (class standard rules 6.4 and 6.6): at 375 x 667 the dark-only
  *      page has no sideways scroll and the transport buttons are at least 44 x 44.
+ *      Last, two browser
+ *      contexts ("pc", "phone") share one versioned store through the window.__tsTestKit
+ *      seam: a kata viewed on one device appears on the other when its page is shown again,
+ *      and an offline view is sent by the `online` event alone (cross-device sync).
  *
  *   npm run e2e            (needs `npx playwright install chromium` once)
  *   E2E_SHOTS_DIR=<dir>    screenshots go there instead of e2e-artifacts/ (gitignored)
@@ -336,6 +340,165 @@ async function phoneScreen(browser: Awaited<ReturnType<typeof chromium.launch>>,
   }
 }
 
+/**
+ * The page-side versioned test kit (window.__tsTestKit, the seam initKit uses on a dev host
+ * in place of the no-op mock). It is TSKit-shaped: init({ game, merge, summarize }) returns a
+ * kit whose load / save / refresh go to one in-node store shared by every context, through
+ * bindings exposed per context. The store keeps { state, version } and answers a save made
+ * against an older version with a conflict, which the kit combines with the class's merge and
+ * sends again, as the portal kit does. `window.__tsTestOffline`: a strict load rejects with
+ * "progress-unavailable", save stays "local", refresh reports no change.
+ */
+function testKitScript(deviceId: string): string {
+  return `(() => {
+    const w = window;
+    w.__kitAwards = [];
+    w.__kitToasts = [];
+    w.__tsTestOffline = false;
+    w.__tsTestKit = {
+      init: async (o) => {
+        const merge = o.merge, summarize = o.summarize;
+        const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+        let known = null;
+        const learn = (state, version) => {
+          known = known ? { state: merge(known.state, state), version: Math.max(known.version, version) } : { state: merge(state, {}), version };
+        };
+        const unavailable = () => Object.assign(new Error('progress unavailable'), { code: 'progress-unavailable' });
+        return {
+          mock: true,
+          user: { id: 'e2e', displayName: 'E2E Learner', role: 'student' },
+          totals: { xp: 0, gems: 0, level: 1, streak: 0 },
+          launcherUrl: 'https://class.travelschooling.com',
+          deviceId: ${JSON.stringify(deviceId)},
+          syncBroken: false,
+          async load(opts) {
+            if (w.__tsTestOffline) {
+              if (opts && opts.strict) throw unavailable();
+              return known ? known.state : {};
+            }
+            const r = await w.__e2eStoreLoad();
+            learn(r.state, r.version);
+            return known.state;
+          },
+          async save(state) {
+            if (w.__tsTestOffline) return { stored: 'local' };
+            const mine = merge(state, {});
+            let send = known ? merge(known.state, mine) : mine;
+            for (let round = 0; round < 3; round++) {
+              const r = await w.__e2eStoreSave({ state: send, summary: summarize(send), base: known ? known.version : 0 });
+              if (r.ok) {
+                known = { state: send, version: r.version };
+                return same(send, mine) ? { stored: 'server' } : { stored: 'server', merged: send };
+              }
+              learn(r.state, r.version);
+              send = merge(known.state, send);
+            }
+            return { stored: 'local' };
+          },
+          async refresh(current) {
+            if (w.__tsTestOffline) return { changed: false };
+            const r = await w.__e2eStoreLoad();
+            if (known && r.version <= known.version) return { changed: false };
+            learn(r.state, r.version);
+            return { changed: true, state: merge(current, known.state) };
+          },
+          async award(event, detail) {
+            w.__kitAwards.push({ event, detail });
+            return { awarded_xp: 0, xp: 0, gems: 0, level: 1, streak: 0, level_up: false, new_achievements: [] };
+          },
+          unlock: async () => ({}),
+          toast: (text) => { w.__kitToasts.push(text); },
+        };
+      },
+    };
+  })()`;
+}
+
+type SyncState = { rev: number; viewed: string[]; completed: string[] };
+const ARRIVAL = "Updated with your work from your other device.";
+
+/**
+ * Cross-device sync (portal plan 2026-10-07-cross-device-sync-3, CDS3-007): a "pc" and a
+ * "phone" context share one versioned store through window.__tsTestKit. The phone views Wansu;
+ * the pc, shown again (visibilitychange), shows it with the arrival notice, without a reload.
+ * The pc then views Seiunchin offline: nothing reaches the store until the `online` event,
+ * which sends it with no further kata event. Both devices end with the same union.
+ */
+async function crossDeviceSync(browser: Awaited<ReturnType<typeof chromium.launch>>, base: string) {
+  const store: { state: unknown; summary: unknown; version: number } = { state: {}, summary: {}, version: 0 };
+  const saved = () => store.state as SyncState;
+  const waitFor = async (what: string, ok: () => boolean, timeoutMs = 30_000) => {
+    const started = Date.now();
+    while (!ok()) {
+      if (Date.now() - started > timeoutMs) throw new Error(`timed out waiting for ${what}; store: ${JSON.stringify(store)}`);
+      await new Promise((r) => setTimeout(r, 100));
+    }
+  };
+  const errors: string[] = [];
+  const open = async (device: string, path: string) => {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    await context.exposeFunction("__e2eStoreLoad", () => ({ state: store.state, version: store.version }));
+    await context.exposeFunction("__e2eStoreSave", ({ state, summary, base: from }: { state: unknown; summary: unknown; base: number }) => {
+      if (from !== store.version) return { ok: false, state: store.state, version: store.version };
+      store.state = state;
+      store.summary = summary;
+      store.version++;
+      return { ok: true, version: store.version };
+    });
+    await context.addInitScript(testKitScript(device));
+    const page = await context.newPage();
+    page.on("pageerror", (e) => errors.push(`${device}: ${e.message}`));
+    await page.goto(`${base}${path}`, { waitUntil: "load" });
+    return { context, page };
+  };
+  type Dev = { __katasDev?: { progress: () => SyncState | undefined }; __kitToasts?: string[] };
+  const progressOf = (page: Page) => page.evaluate(() => (window as unknown as Dev).__katasDev?.progress?.() ?? null);
+  const toastsOf = (page: Page) => page.evaluate(() => (window as unknown as Dev).__kitToasts ?? []);
+  const shownAgain = (page: Page) => page.evaluate(() => document.dispatchEvent(new Event("visibilitychange")));
+
+  const pc = await open("pc", "/");
+  let phone: Awaited<ReturnType<typeof open>> | null = null;
+  try {
+    await waitFor("the pc's first view (Seisan) in the store", () => saved().viewed?.includes("seisan"));
+    phone = await open("phone", "/?kata=wansu");
+    const phonePage = phone.page;
+    await waitFor("the phone's view (Wansu) in the store", () => saved().viewed?.includes("wansu"));
+    expectEq(JSON.stringify(saved().viewed), JSON.stringify(["seisan", "wansu"]), "store holds both views, catalogue order");
+    expectEq((await toastsOf(pc.page)).includes(ARRIVAL), false, "no notice before the pc is shown again");
+    log("dev sync: pc viewed Seisan, phone viewed Wansu; the shared store holds both");
+
+    await shownAgain(pc.page);
+    await pc.page.waitForFunction(() => ((window as unknown as Dev).__katasDev?.progress?.()?.viewed ?? []).includes("wansu"), null, { timeout: 10_000 });
+    expectEq(JSON.stringify((await progressOf(pc.page))?.viewed), JSON.stringify(["seisan", "wansu"]), "pc progress after refresh");
+    expectEq((await toastsOf(pc.page)).filter((t) => t === ARRIVAL).length, 1, "arrival notice shown once on the pc");
+    log("dev sync: the pc, shown again, picks up Wansu without a reload, with the notice");
+
+    await pc.page.evaluate(() => { (window as unknown as { __tsTestOffline: boolean }).__tsTestOffline = true; });
+    await pc.page.selectOption("#kata-select", "seiunchin.json");
+    await pc.page.waitForFunction(() => ((window as unknown as { __kitAwards?: Award[] }).__kitAwards ?? []).some((x) => x.event === "kata_view" && x.detail.kata === "seiunchin"), null, { timeout: 30_000 });
+    await pc.page.waitForTimeout(1000);
+    expectEq(saved().viewed.includes("seiunchin"), false, "an offline view does not reach the store");
+    expectEq(((await progressOf(pc.page))?.viewed ?? []).includes("seiunchin"), true, "the pc keeps the offline view");
+    await pc.page.evaluate(() => {
+      (window as unknown as { __tsTestOffline: boolean }).__tsTestOffline = false;
+      window.dispatchEvent(new Event("online"));
+    });
+    await waitFor("the offline view sent on reconnect", () => saved().viewed.includes("seiunchin"), 10_000);
+    expectEq(JSON.stringify(saved()), JSON.stringify({ rev: 3, viewed: ["seisan", "seiunchin", "wansu"], completed: [] }), "store after reconnect");
+    log("dev sync: the pc's offline view of Seiunchin is sent by the online event alone");
+
+    await shownAgain(phonePage);
+    await phonePage.waitForFunction(() => ((window as unknown as Dev).__katasDev?.progress?.()?.viewed ?? []).includes("seiunchin"), null, { timeout: 10_000 });
+    expectEq(JSON.stringify(await progressOf(phonePage)), JSON.stringify(await progressOf(pc.page)), "both devices hold the same union");
+    expectEq((await toastsOf(phonePage)).filter((t) => t === ARRIVAL).length, 1, "arrival notice on the phone");
+    expectEq(errors.length, 0, `page errors: ${errors.join(" | ")}`);
+    log("dev sync: the phone, shown again, holds the same union as the pc");
+  } finally {
+    await pc.context.close();
+    if (phone) await phone.context.close();
+  }
+}
+
 async function viewerInDevelopmentMode() {
   const port = await freePort();
   const base = `http://localhost:${port}`;
@@ -503,6 +666,7 @@ async function viewerInDevelopmentMode() {
 
     await leaveDuringDelayedFirstLoad(browser, base);
     await phoneScreen(browser, base);
+    await crossDeviceSync(browser, base);
   } finally {
     // Nested so the dev server is stopped even when the browser never launched or
     // refuses to close.
