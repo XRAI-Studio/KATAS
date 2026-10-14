@@ -1360,3 +1360,78 @@ test('safe mode: a completion saved offline is there when the page is reopened (
     assert.deepEqual(reopened.sync.progress(), { viewed: ['naihanchi'], completed: ['naihanchi'] });
   });
 });
+
+// ---- answer log (kit.answer) ----
+
+const { quizAnswer, reportAnswer } = await import('../public/js/kit.js');
+
+const SEISAN_Q = {
+  category: 'movement',
+  prompt: 'How does Seisan end after the final punch?',
+  choices: ['Three fast punches', 'A jump kick', 'A heel scoop and throw, then bow'],
+  answer: 2,
+};
+
+test('quizAnswer: a right choice is correct with item, skill, given and expected', () => {
+  assert.deepEqual(quizAnswer('Seisan', SEISAN_Q, 2), {
+    correct: true,
+    detail: {
+      item: 'Seisan: How does Seisan end after the final punch?',
+      skill: 'quiz: Seisan movement',
+      given: 'A heel scoop and throw, then bow',
+      expected: 'A heel scoop and throw, then bow',
+    },
+  });
+});
+
+test('quizAnswer: a wrong choice is incorrect, same item and skill; long text is clipped to 200', () => {
+  const a = quizAnswer('Seisan', SEISAN_Q, 1);
+  assert.equal(a.correct, false);
+  assert.equal(a.detail.item, 'Seisan: How does Seisan end after the final punch?');
+  assert.equal(a.detail.given, 'A jump kick');
+  assert.equal(a.detail.expected, 'A heel scoop and throw, then bow');
+  const long = quizAnswer('Chinto', { prompt: 'x'.repeat(300), choices: ['a'], answer: 0 }, 5);
+  assert.equal(long.detail.item.length, 200);
+  assert.equal(long.detail.skill, 'quiz: Chinto');
+  assert.equal(long.detail.given, undefined, 'no such choice');
+});
+
+test('reportAnswer sends right and wrong attempts to kit.answer; the mock records them', () => {
+  const win = {};
+  const kit = mockKit(win);
+  const right = quizAnswer('Seisan', SEISAN_Q, 2);
+  const wrong = quizAnswer('Seisan', SEISAN_Q, 0);
+  assert.equal(reportAnswer(kit, right.correct, right.detail, { cookie: () => '' }), true);
+  assert.equal(reportAnswer(kit, wrong.correct, wrong.detail, { cookie: () => '' }), true);
+  assert.deepEqual(win.__kitAnswers.map((a) => [a.correct, a.skill, a.given]), [
+    [true, 'quiz: Seisan movement', 'A heel scoop and throw, then bow'],
+    [false, 'quiz: Seisan movement', 'Three fast punches'],
+  ]);
+});
+
+test('reportAnswer: no kit.answer, a throwing kit or an account switch never throws', () => {
+  const opts = { cookie: () => cookieFor('user-1') };
+  assert.equal(reportAnswer({ user: { id: 'user-1' }, award: async () => ({}) }, true, {}, opts), false, 'older kit');
+  assert.equal(reportAnswer(null, true, {}, opts), false);
+  const throwing = { user: { id: 'user-1' }, answer: () => { throw new Error('boom'); } };
+  assert.equal(reportAnswer(throwing, false, {}, opts), false);
+  const sent = [];
+  let mismatches = 0;
+  const kit = { user: { id: 'user-1' }, answer: (c, d) => { sent.push([c, d]); } };
+  assert.equal(reportAnswer(kit, true, { item: 'i' }, { cookie: () => cookieFor('user-2'), onMismatch: () => { mismatches++; } }), false);
+  assert.deepEqual(sent, []);
+  assert.equal(mismatches, 1);
+  assert.equal(reportAnswer(kit, false, { item: 'i' }, opts), true);
+  assert.deepEqual(sent, [[false, { item: 'i' }]]);
+});
+
+test('ungraded awards (view, step, complete) record no answers', async () => {
+  const win = {};
+  const kit = mockKit(win);
+  award(kit, 'kata_view', { kata: 'seisan' }, { cookie: () => '' });
+  award(kit, 'kata_step', { kata: 'seisan', step: 1 }, { cookie: () => '' });
+  award(kit, 'kata_complete', { kata: 'seisan' }, { cookie: () => '' });
+  await flushAwards();
+  assert.equal(win.__kitAwards.length, 3);
+  assert.deepEqual(win.__kitAnswers, []);
+});
