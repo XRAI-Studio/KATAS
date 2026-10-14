@@ -25,6 +25,7 @@ const clone = (v) => (v === undefined ? v : JSON.parse(JSON.stringify(v)));
 export function mockKit(win) {
   const awards = (win.__kitAwards = win.__kitAwards || []);
   const saves = (win.__kitSaves = win.__kitSaves || []);
+  const answers = (win.__kitAnswers = win.__kitAnswers || []);
   let stored = null;
   const revOf = (state) => (state && typeof state.rev === 'number' ? state.rev : 0);
   return {
@@ -43,6 +44,9 @@ export function mockKit(win) {
     award: async (event, detail = {}) => {
       awards.push({ event, detail });
       return { ...EMPTY_AWARD };
+    },
+    answer: (correct, detail) => {
+      answers.push({ correct, ...detail });
     },
     unlock: async () => ({}),
     toast: () => undefined,
@@ -604,4 +608,43 @@ export function furthestStepTracker() {
       return false;
     },
   };
+}
+
+// ---- answer log (kit.answer, portal migration 0018) ----
+
+/**
+ * Reports one graded attempt, right or wrong, through `kit.answer` (`detail`: item, skill,
+ * given, expected). A kit without `answer` (deployed before the portal's) is skipped, and
+ * nothing it does can throw into the lesson. Refused, like `award`, when the signed-in
+ * account changed under this tab. Call it for graded attempts only (the quiz), never for
+ * views, steps or completions. True when the kit was called.
+ */
+export function reportAnswer(kit, correct, detail, { cookie = () => document.cookie, onMismatch = () => {} } = {}) {
+  try {
+    if (!kit || typeof kit.answer !== 'function') return false;
+    if (!sameAccount(kit, cookie())) {
+      onMismatch();
+      return false;
+    }
+    kit.answer(Boolean(correct), detail);
+    return true;
+  } catch {
+    return false; // answer logging must never break a lesson
+  }
+}
+
+const clip = (s, n = 200) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+
+/**
+ * The graded attempt for one quiz question (the course-draft shape: `{ category, prompt,
+ * choices, answer }`, `answer` the right choice's index) when the learner picked choice
+ * `chosen`: `{ correct, detail }` for reportAnswer. `title` is the kata's display name.
+ * item "Seisan: <prompt>", skill "quiz: Seisan movement".
+ */
+export function quizAnswer(title, question, chosen) {
+  const choices = Array.isArray(question.choices) ? question.choices : [];
+  const detail = { item: clip(`${title}: ${question.prompt}`), skill: question.category ? `quiz: ${title} ${question.category}` : `quiz: ${title}` };
+  if (typeof choices[chosen] === 'string') detail.given = clip(choices[chosen]);
+  if (typeof choices[question.answer] === 'string') detail.expected = clip(choices[question.answer]);
+  return { correct: chosen === question.answer, detail };
 }
